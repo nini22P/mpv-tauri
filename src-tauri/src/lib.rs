@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     io::{BufRead, BufReader, Write},
+    process::Command,
     time::Duration,
 };
 use tauri::Emitter;
@@ -26,6 +27,24 @@ pub struct MpvEventPayload {
     event_type: String,
     name: Option<String>,
     data: Option<Value>,
+}
+
+pub fn init(wid: i64) {
+    println!("Attempting to start mpv with WID: {}", wid);
+    Command::new("mpv")
+        .args(&[
+            &format!("--wid={}", wid),
+            &format!("--input-ipc-server={}", IPC_PATH),
+            "--idle=yes",
+            "--force-window",
+            "--keep-open=yes",
+            "--no-border",
+            "--input-default-bindings=no",
+            "--input-vo-keyboard=no",
+            "--no-osc",
+        ])
+        .spawn()
+        .expect("Failed to start mpv. Is mpv installed and in your PATH?");
 }
 
 pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
