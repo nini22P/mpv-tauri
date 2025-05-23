@@ -1,0 +1,36 @@
+.control {
+  padding: 0.5rem;
+  color: #f0f0f0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: fixed;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.control-buttons button {
+  background-color: #3a3a3a;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+}
+
+.control-buttons button:hover {
+  background-color: #4a4a4a;
+}
+
+.control-buttons button:active {
+  background-color: #555555;
+}
