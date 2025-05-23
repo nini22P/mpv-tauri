@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use mpv_tauri_lib::IPC_PATH;
+use mpv_tauri_lib::{mpv_event, IPC_PATH};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::process::Command;
 use tauri::Manager;
@@ -16,6 +16,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![send_mpv_command])
         .setup(|app| {
             let webview_window = app.get_webview_window("main").unwrap();
+            let app_handle = app.handle().clone();
 
             let handle_result = webview_window.window_handle();
 
@@ -49,6 +50,8 @@ fn main() {
                             .spawn()
                             .expect("Failed to start mpv. Is mpv installed and in your PATH?");
                     });
+
+                    std::thread::spawn(move || mpv_event(app_handle));
                 }
                 Err(e) => {
                     eprintln!("Failed to get raw window handle: {:?}", e);

@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Write};
+use serde_json::Value;
+use std::{
+    io::{BufRead, BufReader, Write},
+    time::Duration,
+};
+use tauri::Emitter;
 
 #[cfg(windows)]
 use std::fs::OpenOptions;
@@ -14,6 +19,13 @@ pub const IPC_PATH: &str = "/tmp/mpvsocket";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MpvCommand {
     command: Vec<String>,
+}
+
+#[derive(Clone, serde::Serialize)]
+pub struct MpvEventPayload {
+    event_type: String,
+    name: Option<String>,
+    data: Option<Value>,
 }
 
 pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
@@ -71,5 +83,83 @@ pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
         println!("Received response: {}", response);
 
         Ok(response)
+    }
+}
+
+pub fn mpv_event(app_handle: tauri::AppHandle) {
+    {
+        std::thread::sleep(Duration::from_secs(2));
+
+        #[cfg(windows)]
+        let stream_result = OpenOptions::new().read(true).write(true).open(IPC_PATH);
+
+        #[cfg(unix)]
+        let stream_result = UnixStream::connect(IPC_PATH);
+
+        match stream_result {
+            Ok(mut stream) => {
+                println!("Successfully connected to mpv IPC for event listening.");
+
+                let observe_commands = [
+                    r#"{"command": ["observe_property", 1, "pause"]}"#,
+                    r#"{"command": ["observe_property", 2, "filename"]}"#,
+                    r#"{"command": ["observe_property", 3, "eof-reached"]}"#,
+                    r#"{"command": ["observe_property", 4, "time-pos"]}"#,
+                    r#"{"command": ["observe_property", 5, "duration"]}"#,
+                    r#"{"command": ["observe_property", 6, "percent-pos"]}"#,
+                ];
+
+                for cmd_str in observe_commands.iter() {
+                    if stream.write_all(cmd_str.as_bytes()).is_ok()
+                        && stream.write_all(b"\n").is_ok()
+                    {
+                        stream.flush().ok();
+                        println!("Sent: {}", cmd_str);
+                    } else {
+                        eprintln!("Failed to send: {}", cmd_str);
+                    }
+                }
+
+                let reader = BufReader::new(stream);
+                for line_result in reader.lines() {
+                    match line_result {
+                        Ok(line) => {
+                            // println!("MPV Event: {}", line);
+                            if let Ok(json_value) = serde_json::from_str::<Value>(&line) {
+                                if let Some(event_name_val) = json_value.get("event") {
+                                    let event_name = event_name_val.as_str().unwrap_or_default();
+
+                                    let mut payload_name: Option<String> = None;
+                                    if let Some(name_val) = json_value.get("name") {
+                                        payload_name = name_val.as_str().map(String::from);
+                                    }
+
+                                    let payload_data = json_value.get("data").cloned();
+
+                                    let payload = MpvEventPayload {
+                                        event_type: event_name.to_string(),
+                                        name: payload_name,
+                                        data: payload_data,
+                                    };
+                                    app_handle.emit_to("main", "mpv-event", &payload).unwrap();
+                                }
+                            } else {
+                                eprintln!("Failed to parse mpv event line as JSON: {}", line);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error reading from mpv IPC: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "Failed to connect to mpv IPC for event listening at '{}': {}",
+                    IPC_PATH, e
+                );
+            }
+        }
     }
 }

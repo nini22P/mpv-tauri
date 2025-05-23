@@ -1,27 +1,24 @@
-import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import './control.css'
+import './Control.css';
+import { PlayerStatus, sendCommand } from '../App';
 
-interface MpvCommand {
-  command: string[];
-}
+const formatTime = (seconds: number | null | undefined): string => {
+  if (seconds === null || seconds === undefined || isNaN(seconds)) {
+    return "00:00";
+  }
+  const flooredSeconds = Math.floor(seconds);
+  const m = Math.floor(flooredSeconds / 60);
+  const s = flooredSeconds % 60;
+  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+};
 
-const Control = () => {
-  const sendCommand = async (command: MpvCommand) => {
-    try {
-      const commandJson = JSON.stringify(command);
-      await invoke<string>('send_mpv_command', { commandJson });
-    } catch (err) {
-      console.error('Error sending MPV command:', err);
-    }
-  };
-
+const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
   const handlePlay = () => {
-    sendCommand({ command: ['set_property', 'pause', false as unknown as string] });
+    sendCommand({ command: ['set_property', 'pause', false] });
   };
 
   const handlePause = () => {
-    sendCommand({ command: ['set_property', 'pause', true as unknown as string] });
+    sendCommand({ command: ['set_property', 'pause', true] });
   };
 
   const handleStop = () => {
@@ -36,18 +33,6 @@ const Control = () => {
     sendCommand({ command: ['seek', '-10', 'relative'] });
   };
 
-  const handleVolumeUp = () => {
-    sendCommand({ command: ['add', 'volume', '5'] });
-  };
-
-  const handleVolumeDown = () => {
-    sendCommand({ command: ['add', 'volume', '-5'] });
-  };
-
-  const handleMute = () => {
-    sendCommand({ command: ['cycle', 'mute'] });
-  };
-
   const handleLoadFile = async () => {
     const file = await open({
       multiple: false,
@@ -55,23 +40,43 @@ const Control = () => {
     });
 
     if (file) {
-      sendCommand({ command: ['loadfile', file] });
+      sendCommand({ command: ['loadfile', file as string] });
     }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    sendCommand({ command: ['seek', e.target.value, 'absolute'] });
   };
 
   return (
     <div className="control">
       <div className="control-buttons">
-        <button type="button" onClick={handlePlay} >Play</button>
-        <button type="button" onClick={handlePause} >Pause</button>
+        <button type="button" onClick={handleLoadFile} >Load File</button>
+        <button
+          type="button"
+          onClick={
+            playerStatus.isPaused
+              ? () => handlePlay()
+              : () => handlePause()
+          }
+        >
+          {playerStatus.isPaused ? 'Play' : 'Pause'}
+        </button>
         <button type="button" onClick={handleStop} >Stop</button>
         <button type="button" onClick={handleSeekBackward} >-10s</button>
         <button type="button" onClick={handleSeekForward} >+10s</button>
-        <button type="button" onClick={handleVolumeDown} >Vol-</button>
-        <button type="button" onClick={handleVolumeUp} >Vol+</button>
-        <button type="button" onClick={handleMute} >Mute</button>
-        <button type="button" onClick={handleLoadFile} >Load File</button>
       </div>
+      <input
+        className="slider"
+        title='Slider'
+        type='range'
+        min={0}
+        max={playerStatus.duration}
+        value={playerStatus.timePos}
+        step={1}
+        onChange={handleSeek}
+      />
+      <p className="time"> {formatTime(playerStatus.timePos)} / {formatTime(playerStatus.duration)}</p>
     </div>
   );
 };
