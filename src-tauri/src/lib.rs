@@ -17,6 +17,8 @@ pub const IPC_PATH: &str = r"\\.\pipe\mpvsocket";
 #[cfg(unix)]
 pub const IPC_PATH: &str = "/tmp/mpvsocket";
 
+pub static IPC_PATH_ONCELOCK: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MpvCommand {
     command: Vec<String>,
@@ -29,12 +31,21 @@ pub struct MpvEventPayload {
     data: Option<Value>,
 }
 
-pub fn init(wid: i64) {
-    println!("Attempting to start mpv with WID: {}", wid);
+pub fn set_ipc_path(window_handle: i64) {
+   let ipc_path = format!("{}_{}", IPC_PATH, window_handle);
+   println!("Setting IPC Path: {}", ipc_path);
+   IPC_PATH_ONCELOCK.set(ipc_path).unwrap();
+}
+
+pub fn init(window_handle: i64) {
+    println!("Attempting to start mpv with WID: {}", window_handle);
+
+    let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
+
     Command::new("mpv")
         .args(&[
-            &format!("--wid={}", wid),
-            &format!("--input-ipc-server={}", IPC_PATH),
+            &format!("--wid={}", window_handle),
+            &format!("--input-ipc-server={}", ipc_path),
             "--idle=yes",
             "--force-window",
             "--keep-open=yes",
@@ -50,13 +61,15 @@ pub fn init(wid: i64) {
 pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
     println!("Received command: {}", command_json);
 
+    let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
+
     #[cfg(windows)]
     {
         let mut pipe = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(IPC_PATH)
-            .map_err(|e| format!("Failed to open named pipe at '{}': {}", IPC_PATH, e))?;
+            .open(ipc_path)
+            .map_err(|e| format!("Failed to open named pipe at '{}': {}", ipc_path, e))?;
 
         pipe.write_all(command_json.as_bytes())
             .map_err(|e| format!("Failed to write command to named pipe: {}", e))?;
@@ -81,8 +94,8 @@ pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
 
     #[cfg(unix)]
     {
-        let mut stream = UnixStream::connect(IPC_PATH)
-            .map_err(|e| format!("Failed to connect to Unix socket at '{}': {}", IPC_PATH, e))?;
+        let mut stream = UnixStream::connect(ipc_path)
+            .map_err(|e| format!("Failed to connect to Unix socket at '{}': {}", ipc_path, e))?;
 
         stream
             .write_all(command_json.as_bytes())
@@ -106,14 +119,16 @@ pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
 }
 
 pub fn mpv_event(app_handle: tauri::AppHandle) {
+    let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
+
     {
         std::thread::sleep(Duration::from_secs(2));
 
         #[cfg(windows)]
-        let stream_result = OpenOptions::new().read(true).write(true).open(IPC_PATH);
+        let stream_result = OpenOptions::new().read(true).write(true).open(ipc_path);
 
         #[cfg(unix)]
-        let stream_result = UnixStream::connect(IPC_PATH);
+        let stream_result = UnixStream::connect(ipc_path);
 
         match stream_result {
             Ok(mut stream) => {
@@ -176,7 +191,7 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
             Err(e) => {
                 eprintln!(
                     "Failed to connect to mpv IPC for event listening at '{}': {}",
-                    IPC_PATH, e
+                    ipc_path, e
                 );
             }
         }
