@@ -1,6 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import './Control.css';
 import { PlayerStatus, sendCommand } from '../App';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const formatTime = (seconds: number | null | undefined): string => {
   if (seconds === null || seconds === undefined || isNaN(seconds)) {
@@ -48,6 +49,8 @@ const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
     sendCommand({ command: ['seek', e.target.value, 'absolute'] });
   };
 
+  const handleToggleFullscreen = async () => await getCurrentWindow().setFullscreen(!await getCurrentWindow().isFullscreen());
+
   return (
     <div className="control">
       <div className="control-buttons">
@@ -65,6 +68,7 @@ const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
         <button type="button" onClick={handleStop} >Stop</button>
         <button type="button" onClick={handleSeekBackward} >-10s</button>
         <button type="button" onClick={handleSeekForward} >+10s</button>
+        <button type="button" onClick={handleToggleFullscreen} >Toggle Fullscreen</button>
       </div>
       <input
         className="slider"
