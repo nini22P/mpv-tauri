@@ -32,9 +32,9 @@ pub struct MpvEventPayload {
 }
 
 pub fn set_ipc_path(window_handle: i64) {
-   let ipc_path = format!("{}_{}", IPC_PATH, window_handle);
-   println!("Setting IPC Path: {}", ipc_path);
-   IPC_PATH_ONCELOCK.set(ipc_path).unwrap();
+    let ipc_path = format!("{}_{}", IPC_PATH, window_handle);
+    println!("Setting IPC Path: {}", ipc_path);
+    IPC_PATH_ONCELOCK.set(ipc_path).unwrap();
 }
 
 pub fn init(window_handle: i64) {
@@ -135,8 +135,8 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                 println!("Successfully connected to mpv IPC for event listening.");
 
                 let observe_commands = [
-                    r#"{"command": ["observe_property", 1, "pause"]}"#,
-                    r#"{"command": ["observe_property", 2, "filename"]}"#,
+                    r#"{"command": ["observe_property", 1, "filename"]}"#,
+                    r#"{"command": ["observe_property", 2, "pause"]}"#,
                     r#"{"command": ["observe_property", 3, "eof-reached"]}"#,
                     r#"{"command": ["observe_property", 4, "time-pos"]}"#,
                     r#"{"command": ["observe_property", 5, "duration"]}"#,
