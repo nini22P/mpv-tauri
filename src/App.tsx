@@ -4,6 +4,7 @@ import Control from "./components/Control";
 import useConnection from "./hooks/useConnection";
 import usePlayer from "./hooks/usePlayer";
 import useAutoHide from "./hooks/useAutoHide";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 function App() {
 
@@ -16,6 +17,10 @@ function App() {
       showControls();
     }
   }, [connection, showControls]);
+
+  useEffect(() => {
+    getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - MPV Tauri` : 'MPV Tauri');
+  }, [player.currentFile])
 
   return (
     <main

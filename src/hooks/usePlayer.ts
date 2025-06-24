@@ -1,7 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import sendCommand from "../utils/sendCommand";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export interface PlayerState {
   isPaused: boolean;
@@ -117,10 +116,6 @@ const usePlayer = (): Player => {
       unlistenEvent.then(unlistenFn => unlistenFn());
     };
   }, []);
-
-  useEffect(() => {
-    getCurrentWindow().setTitle(state.currentFile ? `${state.currentFile} - MPV Tauri` : 'MPV Tauri');
-  }, [state.currentFile])
 
   const loadFile = async (file: string) => {
     await sendCommand({ command: ['loadfile', file] });
