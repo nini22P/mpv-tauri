@@ -25,10 +25,16 @@ pub struct MpvCommand {
 }
 
 #[derive(Clone, serde::Serialize)]
-pub struct MpvEventPayload {
+pub struct MpvEvent {
     event_type: String,
     name: Option<String>,
     data: Option<Value>,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct MpvConnection {
+    connected: bool,
+    error: Option<String>,
 }
 
 pub fn set_ipc_path(window_handle: i64) {
@@ -134,6 +140,14 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
             Ok(mut stream) => {
                 println!("Successfully connected to mpv IPC for event listening.");
 
+                let payload = MpvConnection {
+                    connected: true,
+                    error: None,
+                };
+                app_handle
+                    .emit_to("main", "mpv-connection-status", &payload)
+                    .unwrap();
+
                 let observe_commands = [
                     r#"{"command": ["observe_property", 1, "filename"]}"#,
                     r#"{"command": ["observe_property", 2, "pause"]}"#,
@@ -170,7 +184,7 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
 
                                     let payload_data = json_value.get("data").cloned();
 
-                                    let payload = MpvEventPayload {
+                                    let payload = MpvEvent {
                                         event_type: event_name.to_string(),
                                         name: payload_name,
                                         data: payload_data,
@@ -193,6 +207,14 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     "Failed to connect to mpv IPC for event listening at '{}': {}",
                     ipc_path, e
                 );
+
+                let payload = MpvConnection {
+                    connected: false,
+                    error: Some(e.to_string()),
+                };
+                app_handle
+                    .emit_to("main", "mpv-connection-status", &payload)
+                    .unwrap();
             }
         }
     }
