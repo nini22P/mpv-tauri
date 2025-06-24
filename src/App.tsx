@@ -98,6 +98,8 @@ function App() {
               case 'percent-pos':
                 newStatus.percentPos = typeof data === 'number' ? data : newStatus.percentPos;
                 break;
+              default:
+                break;
             }
             break;
           case 'file-loaded':
@@ -110,6 +112,8 @@ function App() {
             newStatus.timePos = 0;
             newStatus.duration = 0;
             newStatus.percentPos = 0;
+            break;
+          default:
             break;
         }
 
