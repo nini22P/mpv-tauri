@@ -13,8 +13,8 @@ const useMpvConnection = () => {
   const [connection, setConnection] = useState<MpvConnection>('pending');
 
   useEffect(() => {
-    const unlistenConnection = listen<MpvConnectionPayload>('mpv-connection-status', (event) => {
-      console.log('mpv-connection-status', event.payload);
+    const unlistenConnection = listen<MpvConnectionPayload>('mpv-connection', (event) => {
+      console.log('mpv-connection', event.payload);
       if (event.payload.connected) {
         setConnection('connected');
         sendCommand({ command: ['set_property', 'pause', true] });
