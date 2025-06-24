@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import sendCommand from "../utils/sendCommand";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-export interface Player {
+export interface PlayerState {
   isPaused: boolean;
   currentFile: string | null;
   eofReached: boolean;
@@ -11,6 +11,18 @@ export interface Player {
   duration: number;
   percentPos: number;
 }
+
+export interface PlayerActions {
+  loadFile: (file: string) => Promise<void>;
+  play: () => Promise<void>;
+  pause: () => Promise<void>;
+  stop: () => Promise<void>;
+  seek: (value: number) => Promise<void>;
+  seekForward: () => Promise<void>;
+  seekBackward: () => Promise<void>;
+}
+
+export type Player = PlayerState & PlayerActions;
 
 type MpvEventType =
   | 'property-change'
@@ -31,8 +43,8 @@ interface MpvEventPayload {
   data?: any;
 }
 
-const usePlayer = () => {
-  const [player, setPlayer] = useState<Player>({
+const usePlayer: () => Player = () => {
+  const [state, setState] = useState<PlayerState>({
     isPaused: true,
     currentFile: null,
     eofReached: false,
@@ -45,7 +57,7 @@ const usePlayer = () => {
     const unlistenEvent = listen<MpvEventPayload>('mpv-event', (event) => {
       const { event_type, name, data } = event.payload;
 
-      setPlayer(prev => {
+      setState(prev => {
         let newStatus = { ...prev };
         switch (event_type) {
           case 'property-change':
@@ -118,10 +130,50 @@ const usePlayer = () => {
   }, []);
 
   useEffect(() => {
-    getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - MPV Tauri` : 'MPV Tauri');
-  }, [player.currentFile])
+    getCurrentWindow().setTitle(state.currentFile ? `${state.currentFile} - MPV Tauri` : 'MPV Tauri');
+  }, [state.currentFile])
 
-  return player;
+  const loadFile = async (file: string) => {
+    await sendCommand({ command: ['loadfile', file] });
+  };
+
+  const play = async () => {
+    if (state.eofReached && state.currentFile) {
+      await seek(0);
+    }
+    await sendCommand({ command: ['set_property', 'pause', false] });
+  };
+
+  const pause = async () => {
+    await sendCommand({ command: ['set_property', 'pause', true] });
+  };
+
+  const stop = async () => {
+    await sendCommand({ command: ['stop'] });
+  };
+
+  const seek = async (value: number) => {
+    await sendCommand({ command: ['seek', value, 'absolute'] });
+  };
+
+  const seekForward = async () => {
+    await sendCommand({ command: ['seek', '10', 'relative'] });
+  };
+
+  const seekBackward = async () => {
+    await sendCommand({ command: ['seek', '-10', 'relative'] });
+  };
+
+  return {
+    ...state,
+    loadFile,
+    play,
+    pause,
+    stop,
+    seek,
+    seekForward,
+    seekBackward,
+  };
 }
 
 export default usePlayer;
