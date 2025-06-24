@@ -1,19 +1,12 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import './Control.css';
-import { PlayerStatus, sendCommand } from '../App';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { Player } from '../hooks/usePlayer';
+import sendCommand from '../utils/sendCommand';
+import formatTime from '../utils/formatTime';
 
-const formatTime = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined || isNaN(seconds)) {
-    return "00:00";
-  }
-  const flooredSeconds = Math.floor(seconds);
-  const m = Math.floor(flooredSeconds / 60);
-  const s = flooredSeconds % 60;
-  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-};
+const Control = ({ player }: { player: Player }) => {
 
-const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
   const handlePlay = () => {
     sendCommand({ command: ['set_property', 'pause', false] });
   };
@@ -58,12 +51,12 @@ const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
         <button
           type="button"
           onClick={
-            playerStatus.isPaused
+            player.isPaused
               ? () => handlePlay()
               : () => handlePause()
           }
         >
-          {playerStatus.isPaused ? 'Play' : 'Pause'}
+          {player.isPaused ? 'Play' : 'Pause'}
         </button>
         <button type="button" onClick={handleStop} >Stop</button>
         <button type="button" onClick={handleSeekBackward} >-10s</button>
@@ -75,12 +68,12 @@ const Control = ({ playerStatus }: { playerStatus: PlayerStatus }) => {
         title='Slider'
         type='range'
         min={0}
-        max={playerStatus.duration}
-        value={playerStatus.timePos}
+        max={player.duration}
+        value={player.timePos}
         step={1}
         onChange={handleSeek}
       />
-      <p className="time"> {formatTime(playerStatus.timePos)} / {formatTime(playerStatus.duration)}</p>
+      <p className="time"> {formatTime(player.timePos)} / {formatTime(player.duration)}</p>
     </div>
   );
 };
