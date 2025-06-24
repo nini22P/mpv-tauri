@@ -145,7 +145,7 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     error: None,
                 };
                 app_handle
-                    .emit_to("main", "mpv-connection-status", &payload)
+                    .emit_to("main", "mpv-connection", &payload)
                     .unwrap();
 
                 let observe_commands = [
@@ -213,7 +213,7 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     error: Some(e.to_string()),
                 };
                 app_handle
-                    .emit_to("main", "mpv-connection-status", &payload)
+                    .emit_to("main", "mpv-connection", &payload)
                     .unwrap();
             }
         }
