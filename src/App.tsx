@@ -5,11 +5,13 @@ import useConnection from "./hooks/useConnection";
 import usePlayer from "./hooks/usePlayer";
 import useAutoHide from "./hooks/useAutoHide";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import useCli from "./hooks/useCli";
 
 function App() {
 
   const connection = useConnection();
   const player = usePlayer();
+  const source = useCli();
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
 
   useEffect(() => {
@@ -17,6 +19,12 @@ function App() {
       showControls();
     }
   }, [connection, showControls]);
+
+  useEffect(() => {
+    if (connection === 'connected' && source) {
+      player.loadFile(source);
+    }
+  }, [connection, source])
 
   useEffect(() => {
     getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - MPV Tauri` : 'MPV Tauri');

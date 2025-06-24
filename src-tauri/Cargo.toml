@@ -28,3 +28,6 @@ tauri-plugin-dialog = "2"
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winbase", "fileapi", "namedpipeapi", "winnt"] }
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-cli = "2"
+
