@@ -1,0 +1,16 @@
+{
+  "identifier": "desktop-capability",
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "cli:default",
+    "core:window:allow-set-title",
+    "core:window:allow-set-fullscreen"
+  ]
+}

@@ -10,6 +10,7 @@ fn send_mpv_command(command_json: &str) -> Result<String, String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![send_mpv_command])
         .setup(|app| {

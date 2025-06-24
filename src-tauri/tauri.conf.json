@@ -33,5 +33,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "MPV Tauri",
+      "args": [
+        {
+          "name": "source",
+          "index": 1,
+          "takesValue": true
+        }
+      ]
+    }
   }
 }

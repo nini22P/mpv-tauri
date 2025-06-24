@@ -2,7 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import sendCommand from "../utils/sendCommand";
 
-export interface PlayerState {
+interface PlayerState {
   isPaused: boolean;
   currentFile: string | null;
   eofReached: boolean;
@@ -11,7 +11,7 @@ export interface PlayerState {
   percentPos: number;
 }
 
-export interface PlayerActions {
+interface PlayerActions {
   loadFile: (file: string) => Promise<void>;
   play: () => Promise<void>;
   pause: () => Promise<void>;
