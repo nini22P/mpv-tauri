@@ -7,24 +7,27 @@ import formatTime from '../utils/formatTime';
 
 const Control = ({ player }: { player: Player }) => {
 
-  const handlePlay = () => {
-    sendCommand({ command: ['set_property', 'pause', false] });
+  const handlePlay = async () => {
+    if (player.eofReached && player.currentFile) {
+      await handleSeek(0);
+    }
+    await sendCommand({ command: ['set_property', 'pause', false] });
   };
 
-  const handlePause = () => {
-    sendCommand({ command: ['set_property', 'pause', true] });
+  const handlePause = async () => {
+    await sendCommand({ command: ['set_property', 'pause', true] });
   };
 
-  const handleStop = () => {
-    sendCommand({ command: ['stop'] });
+  const handleStop = async () => {
+    await sendCommand({ command: ['stop'] });
   };
 
-  const handleSeekForward = () => {
-    sendCommand({ command: ['seek', '10', 'relative'] });
+  const handleSeekForward = async () => {
+    await sendCommand({ command: ['seek', '10', 'relative'] });
   };
 
-  const handleSeekBackward = () => {
-    sendCommand({ command: ['seek', '-10', 'relative'] });
+  const handleSeekBackward = async () => {
+    await sendCommand({ command: ['seek', '-10', 'relative'] });
   };
 
   const handleLoadFile = async () => {
@@ -34,12 +37,12 @@ const Control = ({ player }: { player: Player }) => {
     });
 
     if (file) {
-      sendCommand({ command: ['loadfile', file as string] });
+      await sendCommand({ command: ['loadfile', file as string] });
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    sendCommand({ command: ['seek', e.target.value, 'absolute'] });
+  const handleSeek = async (value: number) => {
+    await sendCommand({ command: ['seek', value, 'absolute'] });
   };
 
   const handleToggleFullscreen = async () => await getCurrentWindow().setFullscreen(!await getCurrentWindow().isFullscreen());
@@ -50,11 +53,7 @@ const Control = ({ player }: { player: Player }) => {
         <button type="button" onClick={handleLoadFile} >Load File</button>
         <button
           type="button"
-          onClick={
-            player.isPaused
-              ? () => handlePlay()
-              : () => handlePause()
-          }
+          onClick={player.isPaused ? handlePlay : handlePause}
         >
           {player.isPaused ? 'Play' : 'Pause'}
         </button>
@@ -71,7 +70,7 @@ const Control = ({ player }: { player: Player }) => {
         max={player.duration}
         value={player.timePos}
         step={1}
-        onChange={handleSeek}
+        onChange={(e) => handleSeek(Number(e.target.value))}
       />
       <p className="time"> {formatTime(player.timePos)} / {formatTime(player.duration)}</p>
     </div>

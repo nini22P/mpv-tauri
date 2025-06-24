@@ -9,15 +9,15 @@ interface MpvConnectionPayload {
   error?: string;
 }
 
-const useMpvConnection = () => {
+const useConnection = () => {
   const [connection, setConnection] = useState<MpvConnection>('pending');
 
   useEffect(() => {
-    const unlistenConnection = listen<MpvConnectionPayload>('mpv-connection', (event) => {
+    const unlistenConnection = listen<MpvConnectionPayload>('mpv-connection', async (event) => {
       console.log('mpv-connection', event.payload);
       if (event.payload.connected) {
         setConnection('connected');
-        sendCommand({ command: ['set_property', 'pause', true] });
+       await sendCommand({ command: ['set_property', 'pause', true] });
       } else {
         setConnection('error');
         console.error("MPV connection failed:", event.payload.error);
@@ -43,4 +43,4 @@ const useMpvConnection = () => {
   return connection;
 };
 
-export default useMpvConnection;
+export default useConnection;
