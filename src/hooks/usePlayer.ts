@@ -43,7 +43,7 @@ interface MpvEventPayload {
   data?: any;
 }
 
-const usePlayer: () => Player = () => {
+const usePlayer = (): Player => {
   const [state, setState] = useState<PlayerState>({
     isPaused: true,
     currentFile: null,
@@ -64,27 +64,15 @@ const usePlayer: () => Player = () => {
             switch (name) {
               case 'pause':
                 console.log('pause', data);
-                if (typeof data === 'boolean') {
-                  newStatus.isPaused = data;
-                }
+                newStatus.isPaused = typeof data === 'boolean' ? data : true;
                 break;
               case 'filename':
                 console.log('filename', data);
-                newStatus.currentFile = data || null;
-                if (data) {
-                  newStatus.isPaused = false;
-                  newStatus.eofReached = false;
-                  newStatus.timePos = 0;
-                  newStatus.duration = 0;
-                  newStatus.percentPos = 0;
-                }
+                newStatus.currentFile = data;
                 break;
               case 'eof-reached':
                 console.log('eof-reached', data);
-                if (typeof data === 'boolean') {
-                  newStatus.eofReached = data;
-                  if (data) newStatus.isPaused = true;
-                }
+                newStatus.eofReached = typeof data === 'boolean' ? data : false;
                 break;
               case 'time-pos':
                 newStatus.timePos = typeof data === 'number' ? data : newStatus.timePos;
@@ -100,10 +88,11 @@ const usePlayer: () => Player = () => {
             }
             break;
           case 'file-loaded':
-            sendCommand({ command: ['set_property', 'pause', false] });
-            newStatus.eofReached = false;
+            console.log('file-loaded', data);
+            play();
             break;
           case 'end-file':
+            console.log('end-file', data);
             newStatus.eofReached = true;
             newStatus.currentFile = null;
             newStatus.timePos = 0;
@@ -138,7 +127,7 @@ const usePlayer: () => Player = () => {
   };
 
   const play = async () => {
-    if (state.eofReached && state.currentFile) {
+    if (state.currentFile && (state.duration - state.timePos < 1 || state.eofReached)) {
       await seek(0);
     }
     await sendCommand({ command: ['set_property', 'pause', false] });
@@ -149,6 +138,7 @@ const usePlayer: () => Player = () => {
   };
 
   const stop = async () => {
+    await pause();
     await sendCommand({ command: ['stop'] });
   };
 
