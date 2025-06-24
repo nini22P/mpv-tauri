@@ -24,7 +24,7 @@ function App() {
       onMouseLeave={hideControls}
     >
       {connection === 'pending' && <div className="connection-status">Connecting to MPV...</div>}
-      {connection === 'error' && <div className="connection-status error">Failed to start MPV. Is it installed and in your PATH?</div>}
+      {connection === 'error' && <div className="connection-status">Failed to start MPV. Is it installed and in your PATH?</div>}
       {connection === 'connected' && visible && <Control player={player} />}
     </main>
   );
