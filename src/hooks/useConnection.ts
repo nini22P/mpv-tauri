@@ -1,6 +1,6 @@
-import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
-import sendCommand from "../utils/sendCommand";
+import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState } from 'react';
+import sendCommand from '../utils/sendCommand';
 
 export type Connection = 'pending' | 'connected' | 'error';
 
@@ -20,14 +20,14 @@ const useConnection = () => {
         await sendCommand({ command: ['set_property', 'pause', true] });
       } else {
         setConnection('error');
-        console.error("MPV connection failed:", event.payload.error);
+        console.error('MPV connection failed:', event.payload.error);
       }
     });
 
     const connectionTimeout = setTimeout(() => {
       setConnection(currentConnection => {
         if (currentConnection === 'pending') {
-          console.error("MPV connection timeout. Is mpv installed and in your PATH?");
+          console.error('MPV connection timeout. Is mpv installed and in your PATH?');
           return 'error';
         }
         return currentConnection;

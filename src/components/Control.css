@@ -11,6 +11,7 @@
   width: 100%;
   height: fit-content;
   gap: 0.5rem;
+  height: 50px;
 }
 
 .control-buttons {
@@ -73,4 +74,36 @@
 
 .time {
   text-wrap: nowrap;
+}
+
+.playlist {
+  position: fixed;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 50px);
+  background-color: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  color: #f0f0f0;
+  text-wrap: nowrap;
+}
+
+.playlist-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem;
+}
+
+.playlist-item:hover,
+.active {
+  color: #2f2f2f;
+  background-color: rgba(255, 255, 255, 0.75);
 }

@@ -3,13 +3,16 @@ import './Control.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Player } from '../hooks/usePlayer';
 import formatTime from '../utils/formatTime';
+import { useState } from 'react';
 
 const Control = ({ player }: { player: Player }) => {
 
-  const handleLoadFile = async () => {
+  const [playlistVisible, setPlaylistVisible] = useState(false);
+
+  const handleLoadFile = async (folder = false) => {
     const file = await open({
       multiple: false,
-      directory: false,
+      directory: folder,
     });
 
     if (file) {
@@ -22,7 +25,9 @@ const Control = ({ player }: { player: Player }) => {
   return (
     <div className="control">
       <div className="control-buttons">
-        <button type="button" onClick={handleLoadFile} >Load File</button>
+        <button type="button" onClick={() => setPlaylistVisible(!playlistVisible)} >Playlist</button>
+        <button type="button" onClick={() => handleLoadFile()} >Load File</button>
+        <button type="button" onClick={() => handleLoadFile(true)} >Load Folder</button>
         <button
           type="button"
           onClick={player.isPaused ? player.play : player.pause}
@@ -45,6 +50,26 @@ const Control = ({ player }: { player: Player }) => {
         onChange={(e) => player.seek(Number(e.target.value))}
       />
       <p className="time"> {formatTime(player.timePos)} / {formatTime(player.duration)}</p>
+
+      {
+        playlistVisible &&
+        <div className="playlist">
+          {
+            player.playlist.map((item, index) => (
+              <div
+                key={index}
+                className={`playlist-item ${item.current ? 'active' : ''}`}
+                onClick={() => {
+                  player.playlistPlay(index);
+                  setPlaylistVisible(false);
+                }}
+              >
+                {item.current ? '▶ ' : ''}{item.filename.split('/').pop()?.split('\\').pop()}
+              </div>
+            ))
+          }
+        </div>
+      }
     </div>
   );
 };

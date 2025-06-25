@@ -37,6 +37,15 @@ struct MpvConnection {
     error: Option<String>,
 }
 
+pub const OBSERVED_PROPERTIES: [&str; 6] = [
+    "playlist",
+    "filename",
+    "pause",
+    "eof-reached",
+    "time-pos",
+    "duration",
+];
+
 pub fn set_ipc_path(window_handle: i64) {
     let ipc_path = format!("{}_{}", IPC_PATH, window_handle);
     println!("Setting IPC Path: {}", ipc_path);
@@ -148,14 +157,17 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     .emit_to("main", "mpv-connection", &payload)
                     .unwrap();
 
-                let observe_commands = [
-                    r#"{"command": ["observe_property", 1, "filename"]}"#,
-                    r#"{"command": ["observe_property", 2, "pause"]}"#,
-                    r#"{"command": ["observe_property", 3, "eof-reached"]}"#,
-                    r#"{"command": ["observe_property", 4, "time-pos"]}"#,
-                    r#"{"command": ["observe_property", 5, "duration"]}"#,
-                    r#"{"command": ["observe_property", 6, "percent-pos"]}"#,
-                ];
+                let observe_commands: Vec<String> = OBSERVED_PROPERTIES
+                    .iter()
+                    .enumerate()
+                    .map(|(id, property)| {
+                        format!(
+                            r#"{{"command": ["observe_property", {}, "{}"]}}"#,
+                            id + 1,
+                            property
+                        )
+                    })
+                    .collect();
 
                 for cmd_str in observe_commands.iter() {
                     if stream.write_all(cmd_str.as_bytes()).is_ok()
