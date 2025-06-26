@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::{
     io::{BufRead, BufReader, Write},
     process::Command,
@@ -19,16 +17,11 @@ pub const IPC_PATH: &str = "/tmp/mpvsocket";
 
 pub static IPC_PATH_ONCELOCK: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MpvCommand {
-    command: Vec<String>,
-}
-
 #[derive(Clone, serde::Serialize)]
 pub struct MpvEvent {
     event_type: String,
     name: Option<String>,
-    data: Option<Value>,
+    data: Option<serde_json::Value>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -185,7 +178,7 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     match line_result {
                         Ok(line) => {
                             // println!("MPV Event: {}", line);
-                            if let Ok(json_value) = serde_json::from_str::<Value>(&line) {
+                            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&line) {
                                 if let Some(event_name_val) = json_value.get("event") {
                                     let event_name = event_name_val.as_str().unwrap_or_default();
 
