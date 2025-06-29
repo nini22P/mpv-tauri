@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import "./App.css";
 import Control from "./components/Control";
 import useConnection from "./hooks/useConnection";
