@@ -1,10 +1,7 @@
 .control {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: #2f2f2f;
   padding: 0.5rem;
-  color: #f0f0f0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  position: fixed;
-  top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -23,7 +20,6 @@
 
 .control-buttons button {
   background-color: #3a3a3a;
-  color: #ffffff;
   border: none;
   padding: 8px 16px;
   cursor: pointer;
@@ -78,8 +74,9 @@
 
 .playlist {
   position: fixed;
-  top: 50px;
+  top: 0;
   left: 0;
+  bottom: 50px;
   width: 100%;
   height: calc(100% - 50px);
   background-color: rgba(0, 0, 0, 0.5);

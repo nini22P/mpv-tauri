@@ -1,11 +1,10 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import './Control.css';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Player } from '../hooks/usePlayer';
 import formatTime from '../utils/formatTime';
 import { useState } from 'react';
 
-const Control = ({ player }: { player: Player }) => {
+const Control = ({ player, isFullscreen, toggleFullscreen }: { player: Player, isFullscreen: boolean, toggleFullscreen: () => Promise<void> }) => {
 
   const [playlistVisible, setPlaylistVisible] = useState(false);
 
@@ -20,24 +19,35 @@ const Control = ({ player }: { player: Player }) => {
     }
   };
 
-  const handleToggleFullscreen = async () => await getCurrentWindow().setFullscreen(!await getCurrentWindow().isFullscreen());
-
   return (
     <div className="control">
       <div className="control-buttons">
-        <button type="button" onClick={() => setPlaylistVisible(!playlistVisible)} >Playlist</button>
-        <button type="button" onClick={() => handleLoadFile()} >Load File</button>
-        <button type="button" onClick={() => handleLoadFile(true)} >Load Folder</button>
         <button
           type="button"
+          title={playlistVisible ? 'Hide Playlist' : 'Playlist'}
+          style={{ fontSize: '1.125rem' }}
+          onClick={() => setPlaylistVisible(!playlistVisible)}
+        >
+          {playlistVisible ? '×' : '≡'}
+        </button>
+        <button type="button" title={'Load File'} onClick={() => handleLoadFile()} >📄</button>
+        <button type="button" title={'Load Folder'} onClick={() => handleLoadFile(true)} >📂</button>
+        <button
+          type="button"
+          title={player.isPaused ? 'Play' : 'Pause'}
           onClick={player.isPaused ? player.play : player.pause}
         >
-          {player.isPaused ? 'Play' : 'Pause'}
+          {player.isPaused ? '▶' : '⏸'}
         </button>
-        <button type="button" onClick={player.stop} >Stop</button>
-        <button type="button" onClick={player.seekBackward} >-10s</button>
-        <button type="button" onClick={player.seekForward} >+10s</button>
-        <button type="button" onClick={handleToggleFullscreen} >Toggle Fullscreen</button>
+        <button type="button" title={'Stop'} onClick={player.stop} >⏹</button>
+        <button type="button" title={'Previous'} onClick={player.playlistPrev} >⏮</button>
+        <button type="button" title={'Next'} onClick={player.playlistNext} >⏭</button>
+        <button
+          type="button"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          onClick={toggleFullscreen} >
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        </button>
       </div>
       <input
         className="slider"

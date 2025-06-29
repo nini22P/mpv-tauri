@@ -44,6 +44,8 @@ interface PlayerState {
 interface PlayerActions {
   loadFile: (file: string) => Promise<void>;
   playlistPlay: (id: number) => Promise<void>;
+  playlistNext: () => Promise<void>;
+  playlistPrev: () => Promise<void>;
   play: () => Promise<void>;
   pause: () => Promise<void>;
   stop: () => Promise<void>;
@@ -132,11 +134,20 @@ const usePlayer = (): Player => {
     await sendCommand({ command: ['playlist-play-index', index] });
   };
 
+  const playlistNext = async () => {
+    await sendCommand({ command: ['playlist-next'] });
+  };
+
+  const playlistPrev = async () => {
+    await sendCommand({ command: ['playlist-prev'] });
+  };
+
   const play = async () => {
     if (state.currentFile && (state.duration - state.timePos < 1 || state.eofReached)) {
       await seek(0);
     }
     await sendCommand({ command: ['set_property', 'pause', false] });
+    setState(prev => ({ ...prev, isPaused: false }));
   };
 
   const pause = async () => {
@@ -164,6 +175,8 @@ const usePlayer = (): Player => {
     ...state,
     loadFile,
     playlistPlay,
+    playlistNext,
+    playlistPrev,
     play,
     pause,
     stop,

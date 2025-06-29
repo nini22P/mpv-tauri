@@ -30,6 +30,14 @@ struct MpvConnection {
     error: Option<String>,
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
+pub struct VideoMarginRatio {
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
+}
+
 pub const OBSERVED_PROPERTIES: [&str; 6] = [
     "playlist",
     "filename",
@@ -67,8 +75,6 @@ pub fn init(window_handle: i64) {
 }
 
 pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
-    println!("Received command: {}", command_json);
-
     let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
 
     #[cfg(windows)]
@@ -178,7 +184,8 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     match line_result {
                         Ok(line) => {
                             // println!("MPV Event: {}", line);
-                            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&line) {
+                            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&line)
+                            {
                                 if let Some(event_name_val) = json_value.get("event") {
                                     let event_name = event_name_val.as_str().unwrap_or_default();
 
@@ -223,4 +230,34 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
             }
         }
     }
+}
+
+pub fn set_video_margin_ratio(ratio: VideoMarginRatio) {
+    let command = format!(
+        r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
+        ratio.left,
+    );
+
+    send_mpv_command(&command).unwrap();
+
+    let command = format!(
+        r#"{{"command": ["set_property", "video-margin-ratio-right", {}]}}"#,
+        ratio.right,
+    );
+
+    send_mpv_command(&command).unwrap();
+
+    let command = format!(
+        r#"{{"command": ["set_property", "video-margin-ratio-top", {}]}}"#,
+        ratio.top,
+    );
+
+    send_mpv_command(&command).unwrap();
+
+    let command = format!(
+        r#"{{"command": ["set_property", "video-margin-ratio-bottom", {}]}}"#,
+        ratio.bottom,
+    );
+
+    send_mpv_command(&command).unwrap();
 }

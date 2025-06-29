@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import Control from "./components/Control";
 import useConnection from "./hooks/useConnection";
@@ -6,12 +6,15 @@ import usePlayer from "./hooks/usePlayer";
 import useAutoHide from "./hooks/useAutoHide";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import useCli from "./hooks/useCli";
+import VideoRect from "./components/VideoRect";
+import useFullscreen from "./hooks/useFullscreen";
 
 function App() {
 
   const connection = useConnection();
   const player = usePlayer();
   const source = useCli();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
 
   useEffect(() => {
@@ -36,9 +39,14 @@ function App() {
       onMouseMove={showControls}
       onMouseLeave={hideControls}
     >
-      {connection === 'pending' && <div className="connection-status">Connecting to MPV...</div>}
-      {connection === 'error' && <div className="connection-status">Failed to start MPV. Is it installed and in your PATH?</div>}
-      {connection === 'connected' && visible && <Control player={player} />}
+      <VideoRect />
+      {
+        isFullscreen
+          ? visible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
+            <Control player={player} isFullscreen={isFullscreen} toggleFullscreen={toggleFullscreen} />
+          </div>
+          : <Control player={player} isFullscreen={isFullscreen} toggleFullscreen={toggleFullscreen} />
+      }
     </main>
   );
 }
