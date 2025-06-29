@@ -5,14 +5,24 @@ use tauri::Manager;
 
 #[tauri::command]
 fn send_mpv_command(command_json: &str) -> Result<String, String> {
+    println!("Received command: {}", command_json);
     mpv_tauri_lib::send_mpv_command(command_json)
+}
+
+#[tauri::command]
+fn set_video_margin_ratio(ratio: mpv_tauri_lib::VideoMarginRatio) {
+    println!("Received video_margin_ratio: {:?}", ratio);
+    mpv_tauri_lib::set_video_margin_ratio(ratio)
 }
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![send_mpv_command])
+        .invoke_handler(tauri::generate_handler![
+            send_mpv_command,
+            set_video_margin_ratio
+        ])
         .setup(|app| {
             let webview_window = app.get_webview_window("main").unwrap();
             let app_handle = app.handle().clone();
