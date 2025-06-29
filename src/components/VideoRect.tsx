@@ -28,13 +28,10 @@ const VideoRect = () => {
     const resizeObserver = new ResizeObserver(throttledUpdate);
     resizeObserver.observe(videoRect);
 
-    window.addEventListener('resize', throttledUpdate);
-
     throttledUpdate();
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', throttledUpdate);
     };
   }, []);
 
