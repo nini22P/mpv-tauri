@@ -1,6 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 import sendCommand from '../utils/sendCommand';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 type MpvEventType =
   | 'property-change'
@@ -32,13 +33,17 @@ interface MpvEventPayload {
   data: string | number | boolean | PlaylistItem[] | null;
 }
 
+export type Connection = 'pending' | 'connected' | 'error';
+
 interface PlayerState {
+  connection: Connection;
   isPaused: boolean;
   playlist: PlaylistItem[];
   currentFile: string | null;
   eofReached: boolean;
   timePos: number;
   duration: number;
+  isFullscreen: boolean;
 }
 
 interface PlayerActions {
@@ -52,18 +57,21 @@ interface PlayerActions {
   seek: (value: number) => Promise<void>;
   seekForward: () => Promise<void>;
   seekBackward: () => Promise<void>;
+  toggleFullscreen: () => Promise<void>;
 }
 
 export type Player = PlayerState & PlayerActions;
 
 const usePlayer = (): Player => {
   const [state, setState] = useState<PlayerState>({
+    connection: 'pending',
     isPaused: true,
     currentFile: null,
     playlist: [],
     eofReached: false,
     timePos: 0,
     duration: 0,
+    isFullscreen: false,
   });
 
   useEffect(() => {
@@ -71,7 +79,13 @@ const usePlayer = (): Player => {
       const { event_type, name, data } = event.payload;
 
       setState(prev => {
-        let newStatus = { ...prev };
+        const newStatus = { ...prev };
+
+        if (newStatus.connection !== 'connected') {
+          sendCommand({ command: ['set_property', 'pause', true] });
+          newStatus.connection = 'connected';
+        }
+
         switch (event_type) {
           case 'property-change':
             switch (name) {
@@ -126,6 +140,22 @@ const usePlayer = (): Player => {
     };
   }, []);
 
+  useEffect(() => {
+    const connectionTimeout = setTimeout(() => {
+      setState(prev => {
+        if (prev.connection === 'pending') {
+          console.error('MPV connection timeout. Is mpv installed and in your PATH?');
+          return { ...prev, connection: 'error' };
+        }
+        return prev;
+      });
+    }, 5000);
+
+    return () => {
+      clearTimeout(connectionTimeout);
+    };
+  }, [])
+
   const loadFile = async (file: string) => {
     await sendCommand({ command: ['loadfile', file] });
   };
@@ -171,6 +201,11 @@ const usePlayer = (): Player => {
     await sendCommand({ command: ['seek', '-10', 'relative'] });
   };
 
+  const toggleFullscreen = async () => {
+    await getCurrentWindow().setFullscreen(!state.isFullscreen);
+    setState(prev => ({ ...prev, isFullscreen: !prev.isFullscreen }));
+  };
+
   return {
     ...state,
     loadFile,
@@ -183,6 +218,7 @@ const usePlayer = (): Player => {
     seek,
     seekForward,
     seekBackward,
+    toggleFullscreen,
   };
 }
 

@@ -24,12 +24,6 @@ pub struct MpvEvent {
     data: Option<serde_json::Value>,
 }
 
-#[derive(Clone, serde::Serialize)]
-struct MpvConnection {
-    connected: bool,
-    error: Option<String>,
-}
-
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 pub struct VideoMarginRatio {
     left: f64,
@@ -148,14 +142,6 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
             Ok(mut stream) => {
                 println!("Successfully connected to mpv IPC for event listening.");
 
-                let payload = MpvConnection {
-                    connected: true,
-                    error: None,
-                };
-                app_handle
-                    .emit_to("main", "mpv-connection", &payload)
-                    .unwrap();
-
                 let observe_commands: Vec<String> = OBSERVED_PROPERTIES
                     .iter()
                     .enumerate()
@@ -219,14 +205,6 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
                     "Failed to connect to mpv IPC for event listening at '{}': {}",
                     ipc_path, e
                 );
-
-                let payload = MpvConnection {
-                    connected: false,
-                    error: Some(e.to_string()),
-                };
-                app_handle
-                    .emit_to("main", "mpv-connection", &payload)
-                    .unwrap();
             }
         }
     }
