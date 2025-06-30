@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import './VideoRect.css';
 import { invoke } from '@tauri-apps/api/core';
+import { Connection } from '../hooks/useConnection';
 
-const VideoRect = () => {
+const VideoRect = ({ connection }: { connection: Connection }) => {
   const videoRectRef = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
 
@@ -37,10 +38,12 @@ const VideoRect = () => {
   }, []);
 
   useEffect(() => {
+    if (connection !== 'connected') return;
+
     const updateVideoMarginRatio = async () => await invoke('set_video_margin_ratio', { ratio });
 
     updateVideoMarginRatio();
-  }, [ratio]);
+  }, [ratio, connection]);
 
   return <div ref={videoRectRef} className="video-rect"></div>;
 };
