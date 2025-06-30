@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './VideoRect.css';
 import { invoke } from '@tauri-apps/api/core';
-import { Connection } from '../hooks/useConnection';
+import { Connection } from '../hooks/usePlayer';
 
 const VideoRect = ({ connection }: { connection: Connection }) => {
   const videoRectRef = useRef<HTMLDivElement>(null);
@@ -48,7 +48,11 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
     updateVideoMarginRatio();
   }, [ratio, connection]);
 
-  return <div ref={videoRectRef} className="video-rect"></div>;
+  return (
+    <div ref={videoRectRef} className="video-rect" style={{ backgroundColor: connection === 'connected' ? 'transparent' : 'black' }}>
+      {connection === 'error' && 'MPV connection timeout. Is mpv installed and in your PATH?'}
+    </div>
+  );
 };
 
 export default VideoRect;

@@ -4,7 +4,7 @@ import { Player } from '../hooks/usePlayer';
 import formatTime from '../utils/formatTime';
 import { useState } from 'react';
 
-const Control = ({ player, isFullscreen, toggleFullscreen }: { player: Player, isFullscreen: boolean, toggleFullscreen: () => Promise<void> }) => {
+const Control = ({ player }: { player: Player }) => {
 
   const [playlistVisible, setPlaylistVisible] = useState(false);
 
@@ -44,9 +44,9 @@ const Control = ({ player, isFullscreen, toggleFullscreen }: { player: Player, i
         <button type="button" title={'Next'} onClick={player.playlistNext} >⏭</button>
         <button
           type="button"
-          title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-          onClick={toggleFullscreen} >
-          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          title={player.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          onClick={player.toggleFullscreen} >
+          {player.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
         </button>
       </div>
       <input

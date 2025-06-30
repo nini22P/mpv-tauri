@@ -1,33 +1,29 @@
 import { useEffect } from "react";
 import "./App.css";
 import Control from "./components/Control";
-import useConnection from "./hooks/useConnection";
 import usePlayer from "./hooks/usePlayer";
 import useAutoHide from "./hooks/useAutoHide";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import useCli from "./hooks/useCli";
 import VideoRect from "./components/VideoRect";
-import useFullscreen from "./hooks/useFullscreen";
 
 function App() {
 
-  const connection = useConnection();
   const player = usePlayer();
   const source = useCli();
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
 
   useEffect(() => {
-    if (connection === 'connected') {
+    if (player.connection === 'connected') {
       showControls();
     }
-  }, [connection, showControls]);
+  }, [player.connection]);
 
   useEffect(() => {
-    if (connection === 'connected' && source) {
+    if (player.connection === 'connected' && source) {
       player.loadFile(source);
     }
-  }, [connection, source])
+  }, [player.connection, source])
 
   useEffect(() => {
     getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - MPV Tauri` : 'MPV Tauri');
@@ -39,13 +35,13 @@ function App() {
       onMouseMove={showControls}
       onMouseLeave={hideControls}
     >
-      <VideoRect connection={connection} />
+      <VideoRect connection={player.connection} />
       {
-        isFullscreen
+        player.isFullscreen
           ? visible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
-            <Control player={player} isFullscreen={isFullscreen} toggleFullscreen={toggleFullscreen} />
+            <Control player={player} />
           </div>
-          : <Control player={player} isFullscreen={isFullscreen} toggleFullscreen={toggleFullscreen} />
+          : <Control player={player} />
       }
     </main>
   );
