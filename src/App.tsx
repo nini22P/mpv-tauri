@@ -39,7 +39,7 @@ function App() {
       onMouseMove={showControls}
       onMouseLeave={hideControls}
     >
-      <VideoRect />
+      <VideoRect connection={connection} />
       {
         isFullscreen
           ? visible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
