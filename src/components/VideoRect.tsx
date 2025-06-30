@@ -20,9 +20,12 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
       const top = Math.round(rect.top) / window.innerHeight;
       const bottom = 1 - (Math.round(rect.bottom) / window.innerHeight);
 
-      if (ratio.left === left && ratio.right === right && ratio.top === top && ratio.bottom === bottom) return;
-
-      setRatio({ left, right, top, bottom });
+      setRatio(
+        value => {
+          if (value.left === left && value.right === right && value.top === top && value.bottom === bottom) return value;
+          return { left, right, top, bottom }
+        }
+      );
     };
 
     const throttledUpdate = () => window.requestAnimationFrame(updateRatio);
