@@ -1,9 +1,10 @@
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::{
     io::{BufRead, BufReader, Write},
     process::Command,
     time::Duration,
 };
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 #[cfg(windows)]
 use std::fs::OpenOptions;
@@ -41,6 +42,48 @@ pub const OBSERVED_PROPERTIES: [&str; 6] = [
     "duration",
 ];
 
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_cli::init())
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            send_mpv_command,
+            set_video_margin_ratio,
+        ])
+        .setup(|app| {
+            let webview_window = app.get_webview_window("main").unwrap();
+            let app_handle = app.handle().clone();
+            let handle_result = webview_window.window_handle();
+
+            match handle_result {
+                Ok(handle_wrapper) => {
+                    let raw_handle = handle_wrapper.as_raw();
+                    let window_handle = match raw_handle {
+                        RawWindowHandle::Win32(handle) => handle.hwnd.get() as i64,
+                        RawWindowHandle::Xlib(handle) => handle.window as i64,
+                        RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
+                        _ => {
+                            eprintln!("Unsupported window handle type for mpv --wid");
+                            panic!("Unsupported window handle type");
+                        }
+                    };
+
+                    set_ipc_path(window_handle);
+
+                    std::thread::spawn(move || init(window_handle));
+                    std::thread::spawn(move || mpv_event(app_handle));
+                }
+                Err(e) => {
+                    eprintln!("Failed to get raw window handle: {:?}", e);
+                }
+            }
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
 pub fn set_ipc_path(window_handle: i64) {
     let ipc_path = format!("{}_{}", IPC_PATH, window_handle);
     println!("Setting IPC Path: {}", ipc_path);
@@ -66,64 +109,6 @@ pub fn init(window_handle: i64) {
         ])
         .spawn()
         .expect("Failed to start mpv. Is mpv installed and in your PATH?");
-}
-
-pub fn send_mpv_command(command_json: &str) -> Result<String, String> {
-    let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
-
-    #[cfg(windows)]
-    {
-        let mut pipe = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(ipc_path)
-            .map_err(|e| format!("Failed to open named pipe at '{}': {}", ipc_path, e))?;
-
-        pipe.write_all(command_json.as_bytes())
-            .map_err(|e| format!("Failed to write command to named pipe: {}", e))?;
-
-        pipe.write_all(b"\n")
-            .map_err(|e| format!("Failed to write newline to named pipe: {}", e))?;
-
-        pipe.flush()
-            .map_err(|e| format!("Failed to flush named pipe: {}", e))?;
-
-        let mut reader = BufReader::new(pipe);
-        let mut response = String::new();
-
-        reader
-            .read_line(&mut response)
-            .map_err(|e| format!("Failed to read response from named pipe: {}", e))?;
-
-        println!("Received response: {}", response);
-
-        Ok(response)
-    }
-
-    #[cfg(unix)]
-    {
-        let mut stream = UnixStream::connect(ipc_path)
-            .map_err(|e| format!("Failed to connect to Unix socket at '{}': {}", ipc_path, e))?;
-
-        stream
-            .write_all(command_json.as_bytes())
-            .map_err(|e| format!("Failed to write command to Unix socket: {}", e))?;
-
-        stream
-            .write_all(b"\n")
-            .map_err(|e| format!("Failed to write newline to Unix socket: {}", e))?;
-
-        let mut reader = BufReader::new(stream);
-        let mut response = String::new();
-
-        reader
-            .read_line(&mut response)
-            .map_err(|e| format!("Failed to read response from Unix socket: {}", e))?;
-
-        println!("Received response: {}", response);
-
-        Ok(response)
-    }
 }
 
 pub fn mpv_event(app_handle: tauri::AppHandle) {
@@ -210,7 +195,71 @@ pub fn mpv_event(app_handle: tauri::AppHandle) {
     }
 }
 
-pub fn set_video_margin_ratio(ratio: VideoMarginRatio) {
+#[tauri::command]
+fn send_mpv_command(command_json: &str) -> Result<String, String> {
+    println!("Received command: {}", command_json);
+
+    let ipc_path = IPC_PATH_ONCELOCK.get().unwrap();
+
+    #[cfg(windows)]
+    {
+        let mut pipe = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(ipc_path)
+            .map_err(|e| format!("Failed to open named pipe at '{}': {}", ipc_path, e))?;
+
+        pipe.write_all(command_json.as_bytes())
+            .map_err(|e| format!("Failed to write command to named pipe: {}", e))?;
+
+        pipe.write_all(b"\n")
+            .map_err(|e| format!("Failed to write newline to named pipe: {}", e))?;
+
+        pipe.flush()
+            .map_err(|e| format!("Failed to flush named pipe: {}", e))?;
+
+        let mut reader = BufReader::new(pipe);
+        let mut response = String::new();
+
+        reader
+            .read_line(&mut response)
+            .map_err(|e| format!("Failed to read response from named pipe: {}", e))?;
+
+        println!("Received response: {}", response);
+
+        Ok(response)
+    }
+
+    #[cfg(unix)]
+    {
+        let mut stream = UnixStream::connect(ipc_path)
+            .map_err(|e| format!("Failed to connect to Unix socket at '{}': {}", ipc_path, e))?;
+
+        stream
+            .write_all(command_json.as_bytes())
+            .map_err(|e| format!("Failed to write command to Unix socket: {}", e))?;
+
+        stream
+            .write_all(b"\n")
+            .map_err(|e| format!("Failed to write newline to Unix socket: {}", e))?;
+
+        let mut reader = BufReader::new(stream);
+        let mut response = String::new();
+
+        reader
+            .read_line(&mut response)
+            .map_err(|e| format!("Failed to read response from Unix socket: {}", e))?;
+
+        println!("Received response: {}", response);
+
+        Ok(response)
+    }
+}
+
+#[tauri::command]
+fn set_video_margin_ratio(ratio: VideoMarginRatio) {
+    println!("Received video_margin_ratio: {:?}", ratio);
+
     let command = format!(
         r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
         ratio.left,
