@@ -1,18 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import './VideoRect.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Connection } from '../hooks/usePlayer';
 
+interface VideoMarginRatio {
+  left?: number,
+  right?: number,
+  top?: number,
+  bottom?: number,
+};
+
 const VideoRect = ({ connection }: { connection: Connection }) => {
   const videoRectRef = useRef<HTMLDivElement>(null);
-  const [ratio, setRatio] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
+  const prevRatioRef = useRef<VideoMarginRatio>({ left: 0, right: 0, top: 0, bottom: 0 });
 
   useEffect(() => {
     const videoRect = videoRectRef.current;
 
-    if (!videoRect) return;
+    if (!videoRect || connection !== 'connected') return;
 
-    const updateRatio = () => {
+    const updateRatio = async () => {
       const rect = videoRect.getBoundingClientRect();
 
       const left = Math.round(rect.left) / window.innerWidth;
@@ -20,12 +27,25 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
       const top = Math.round(rect.top) / window.innerHeight;
       const bottom = 1 - (Math.round(rect.bottom) / window.innerHeight);
 
-      setRatio(
-        value => {
-          if (value.left === left && value.right === right && value.top === top && value.bottom === bottom) return value;
-          return { left, right, top, bottom }
-        }
-      );
+      const changedRatio: VideoMarginRatio = {};
+      if (left !== prevRatioRef.current.left) {
+        changedRatio.left = left;
+      }
+      if (right !== prevRatioRef.current.right) {
+        changedRatio.right = right;
+      }
+      if (top !== prevRatioRef.current.top) {
+        changedRatio.top = top;
+      }
+      if (bottom !== prevRatioRef.current.bottom) {
+        changedRatio.bottom = bottom;
+      }
+
+      if (Object.keys(changedRatio).length > 0) {
+        await invoke('set_video_margin_ratio', { ratio: changedRatio });
+      }
+
+      prevRatioRef.current = { left, right, top, bottom };
     };
 
     const throttledUpdate = () => window.requestAnimationFrame(updateRatio);
@@ -38,15 +58,7 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-
-  useEffect(() => {
-    if (connection !== 'connected') return;
-
-    const updateVideoMarginRatio = async () => await invoke('set_video_margin_ratio', { ratio });
-
-    updateVideoMarginRatio();
-  }, [ratio, connection]);
+  }, [connection]);
 
   return (
     <div ref={videoRectRef} className="video-rect" style={{ backgroundColor: connection === 'connected' ? 'transparent' : 'black' }}>

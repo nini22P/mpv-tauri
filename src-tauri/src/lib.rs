@@ -27,10 +27,10 @@ pub struct MpvEvent {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 pub struct VideoMarginRatio {
-    left: f64,
-    right: f64,
-    top: f64,
-    bottom: f64,
+    left: Option<f64>,
+    right: Option<f64>,
+    top: Option<f64>,
+    bottom: Option<f64>,
 }
 
 pub const OBSERVED_PROPERTIES: [&str; 6] = [
@@ -260,31 +260,35 @@ fn send_mpv_command(command_json: &str) -> Result<String, String> {
 fn set_video_margin_ratio(ratio: VideoMarginRatio) {
     println!("Received video_margin_ratio: {:?}", ratio);
 
-    let command = format!(
-        r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
-        ratio.left,
-    );
+    if let Some(left) = ratio.left {
+        let command = format!(
+            r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#, 
+            left,
+        );
+        send_mpv_command(&command).unwrap();
+    }
 
-    send_mpv_command(&command).unwrap();
+    if let Some(right) = ratio.right {
+        let command = format!(
+            r#"{{"command": ["set_property", "video-margin-ratio-right", {}]}}"#, 
+            right,
+        );
+        send_mpv_command(&command).unwrap();
+    }
 
-    let command = format!(
-        r#"{{"command": ["set_property", "video-margin-ratio-right", {}]}}"#,
-        ratio.right,
-    );
+    if let Some(top) = ratio.top {
+        let command = format!(
+            r#"{{"command": ["set_property", "video-margin-ratio-top", {}]}}"#, 
+            top,
+        );
+        send_mpv_command(&command).unwrap();
+    }
 
-    send_mpv_command(&command).unwrap();
-
-    let command = format!(
-        r#"{{"command": ["set_property", "video-margin-ratio-top", {}]}}"#,
-        ratio.top,
-    );
-
-    send_mpv_command(&command).unwrap();
-
-    let command = format!(
-        r#"{{"command": ["set_property", "video-margin-ratio-bottom", {}]}}"#,
-        ratio.bottom,
-    );
-
-    send_mpv_command(&command).unwrap();
+    if let Some(bottom) = ratio.bottom {
+        let command = format!(
+            r#"{{"command": ["set_property", "video-margin-ratio-bottom", {}]}}"#, 
+            bottom,
+        );
+        send_mpv_command(&command).unwrap();
+    }
 }
