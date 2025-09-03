@@ -8,7 +8,7 @@ pub fn init_mpv_process(
     window_handle: i64,
     window_label: &str,
     mpv_config: Option<HashMap<String, Value>>,
-) {
+) -> crate::Result<()> {
     println!(
         "Attempting to start mpv with WID: {} for window: {}",
         window_handle, window_label
@@ -64,13 +64,16 @@ pub fn init_mpv_process(
     {
         Ok(child) => {
             println!("MPV process started successfully with PID: {}", child.id());
+            Ok(())
         }
         Err(e) => {
-            eprintln!(
+            let error_message = format!(
                 "Failed to start mpv: {}. Is mpv installed and in your PATH?",
                 e
             );
+            eprintln!("{}", error_message);
             eprintln!("Attempted command: mpv {}", args_clone.join(" "));
+            Err(crate::Error::MpvProcessError(error_message))
         }
     }
 }

@@ -58,13 +58,12 @@ impl<R: Runtime> Mpv<R> {
 
                     let mpv_config_clone = mpv_config.clone();
                     let target_window_clone_for_process = target_window.clone();
-                    std::thread::spawn(move || {
-                        process::init_mpv_process(
-                            window_handle,
-                            &target_window_clone_for_process,
-                            mpv_config_clone,
-                        );
-                    });
+
+                    process::init_mpv_process(
+                        window_handle,
+                        &target_window_clone_for_process,
+                        mpv_config_clone,
+                    )?;
 
                     let app_handle_clone = app_handle.clone();
                     let target_window_clone = target_window.clone();

@@ -13,6 +13,8 @@ pub enum Error {
     UnsupportedPlatform,
     #[error("Failed to get window handle")]
     WindowHandleError,
+    #[error("MPV process failed: {0}")]
+    MpvProcessError(String),
     #[error("IPC communication error: {0}")]
     IpcError(String),
 }
