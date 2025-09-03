@@ -1,28 +1,57 @@
 {
-  "name": "mpv-tauri",
-  "private": true,
+  "name": "tauri-plugin-mpv",
   "version": "0.1.0",
+  "author": "22",
+  "description": "A Tauri plugin that embeds MPV media player window into your Tauri applications.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://github.com/nini22P/tauri-plugin-mpv",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nini22P/tauri-plugin-mpv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nini22P/tauri-plugin-mpv/issues"
+  },
+  "keywords": [
+    "tauri",
+    "plugin",
+    "mpv",
+    "media",
+    "player",
+    "video",
+    "audio",
+    "rust",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "types": "./dist-js/index.d.ts",
+  "main": "./dist-js/index.cjs",
+  "module": "./dist-js/index.js",
+  "exports": {
+    "types": "./dist-js/index.d.ts",
+    "import": "./dist-js/index.js",
+    "require": "./dist-js/index.cjs"
+  },
+  "files": [
+    "dist-js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-cli": "^2.3.0",
-    "@tauri-apps/plugin-dialog": "^2.2.2",
-    "@tauri-apps/plugin-opener": "^2.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@tauri-apps/api": "2"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.8.3",
-    "vite": "^6.0.3"
+    "@rollup/plugin-typescript": "^12.1.4",
+    "rollup": "^4.9.6",
+    "typescript": "^5.3.3",
+    "tslib": "^2.6.2"
   }
 }

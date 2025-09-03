@@ -1,0 +1,30 @@
+[package]
+name = "tauri-plugin-mpv"
+version = "0.1.0"
+authors = ["22"]
+description = "A Tauri plugin that embeds MPV media player window into your Tauri applications."
+edition = "2021"
+rust-version = "1.77.2"
+license = "MIT"
+repository = "https://github.com/nini22P/tauri-plugin-mpv"
+homepage = "https://github.com/nini22P/tauri-plugin-mpv"
+documentation = "https://docs.rs/tauri-plugin-mpv"
+keywords = ["tauri", "plugin", "mpv", "media", "player"]
+categories = ["multimedia", "gui", "api-bindings"]
+readme = "README.md"
+exclude = ["/examples", "/dist-js", "/guest-js", "/node_modules", "/target"]
+links = "tauri-plugin-mpv"
+
+[dependencies]
+tauri = { version = "2" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+raw-window-handle = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+
+[target.'cfg(unix)'.dependencies]
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
