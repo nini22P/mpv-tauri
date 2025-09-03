@@ -51,7 +51,6 @@ body {
 
 ```typescript
 import { initializeMpv, listenMpvEvents, sendMpvCommand, setVideoMarginRatio } from 'tauri-plugin-mpv-api';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
 
