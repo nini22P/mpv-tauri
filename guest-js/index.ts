@@ -56,7 +56,7 @@ export async function initializeMpv(
     observedProperties?: string[] | readonly string[],
     windowLabel?: string,
     mpvConfig?: MpvConfig,
-  }
+  } = {}
 ): Promise<string> {
 
   if (!observedProperties) {

@@ -16,32 +16,6 @@ A Tauri plugin that embeds MPV media player window into your Tauri applications.
 npm run tauri add mpv
 ```
 
-Register the plugin in your Tauri app:
-
-```rust
-// src-tauri/src/lib.rs
-fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_mpv::init())  // Add this line
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-### Configure Permissions
-
-Add the MPV plugin permissions to your capabilities file:
-
-```json
-// src-tauri/capabilities/default.json
-{
-  "permissions": [
-    "core:default",
-    "mpv:default"  // Add this line
-  ]
-}
-```
-
 ### Configure Window Transparency
 
 For MPV to properly embed into your Tauri window, you need to configure transparency:
@@ -67,6 +41,7 @@ For MPV to properly embed into your Tauri window, you need to configure transpar
 
 ```css
 /* In your main CSS file */
+html,
 body {
   background: transparent;
 }
@@ -75,7 +50,7 @@ body {
 ## Quick Start
 
 ```typescript
-import { initializeMpv, listenMpvEvents, sendMpvCommand, setVideoMarginRatio } from 'tauri-plugin-mpv';
+import { initializeMpv, listenMpvEvents, sendMpvCommand, setVideoMarginRatio } from 'tauri-plugin-mpv-api';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;

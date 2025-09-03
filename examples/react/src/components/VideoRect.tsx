@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import './VideoRect.css';
 import { Connection } from '../hooks/usePlayer';
-import { setVideoMarginRatio, VideoMarginRatio } from 'tauri-plugin-mpv';
+import { setVideoMarginRatio, VideoMarginRatio } from 'tauri-plugin-mpv-api';
 
 const VideoRect = ({ connection }: { connection: Connection }) => {
   const videoRectRef = useRef<HTMLDivElement>(null);
