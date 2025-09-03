@@ -14,7 +14,7 @@
     "@tauri-apps/plugin-cli": "^2.3.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-opener": "^2.3.0",
-    "tauri-plugin-mpv": "file:../../",
+    "tauri-plugin-mpv-api": "file:../../",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
