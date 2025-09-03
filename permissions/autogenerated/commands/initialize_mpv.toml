@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-initialize-mpv"
+description = "Enables the initialize_mpv command without any pre-configured scope."
+commands.allow = ["initialize_mpv"]
+
+[[permission]]
+identifier = "deny-initialize-mpv"
+description = "Denies the initialize_mpv command without any pre-configured scope."
+commands.deny = ["initialize_mpv"]

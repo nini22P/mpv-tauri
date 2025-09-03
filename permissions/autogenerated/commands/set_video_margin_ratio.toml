@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-video-margin-ratio"
+description = "Enables the set_video_margin_ratio command without any pre-configured scope."
+commands.allow = ["set_video_margin_ratio"]
+
+[[permission]]
+identifier = "deny-set-video-margin-ratio"
+description = "Denies the set_video_margin_ratio command without any pre-configured scope."
+commands.deny = ["set_video_margin_ratio"]

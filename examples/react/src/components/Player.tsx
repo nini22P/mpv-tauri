@@ -1,16 +1,13 @@
 import { useEffect } from "react";
-import "./App.css";
-import Control from "./components/Control";
-import usePlayer from "./hooks/usePlayer";
-import useAutoHide from "./hooks/useAutoHide";
+import useAutoHide from "../hooks/useAutoHide";
+import usePlayer from "../hooks/usePlayer";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import useCli from "./hooks/useCli";
-import VideoRect from "./components/VideoRect";
+import VideoRect from "./VideoRect";
+import Control from "./Control";
+import './Player.css';
 
-function App() {
-
+const Player = ({ source }: { source: string | null }) => {
   const player = usePlayer();
-  const source = useCli();
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
 
   useEffect(() => {
@@ -30,11 +27,7 @@ function App() {
   }, [player.currentFile])
 
   return (
-    <main
-      className="app"
-      onMouseMove={showControls}
-      onMouseLeave={hideControls}
-    >
+    <div className="player" onMouseMove={showControls} onMouseLeave={hideControls}>
       <VideoRect connection={player.connection} />
       {
         player.isFullscreen
@@ -43,8 +36,8 @@ function App() {
           </div>
           : <Control player={player} />
       }
-    </main>
+    </div>
   );
 }
 
-export default App;
+export default Player;

@@ -6,11 +6,12 @@
     "linux"
   ],
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "cli:default",
     "core:window:allow-set-title",
-    "core:window:allow-set-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "core:webview:allow-create-webview-window"
   ]
 }
