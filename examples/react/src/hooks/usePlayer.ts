@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { COMMON_PROPERTIES, initializeMpv, sendMpvCommand, listenMpvEvents } from 'tauri-plugin-mpv';
+import { COMMON_PROPERTIES, initializeMpv, sendMpvCommand, listenMpvEvents } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = COMMON_PROPERTIES;
 
