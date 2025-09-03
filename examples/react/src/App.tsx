@@ -9,7 +9,7 @@ function App() {
 
   const createPlayerWindow = () => {
     const windowLabel = getCurrentWindow().label
-    new WebviewWindow(windowLabel + 1, {
+    new WebviewWindow(windowLabel + "_" + 1, {
       width: 1280,
       height: 720,
       transparent: true,
