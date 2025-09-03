@@ -91,7 +91,6 @@ const usePlayer = (): Player => {
         const newStatus = { ...prev };
 
         if (newStatus.connection !== 'connected') {
-          sendMpvCommand({ command: ['set_property', 'pause', true] });
           newStatus.connection = 'connected';
         }
 
@@ -133,9 +132,6 @@ const usePlayer = (): Player => {
                 break;
             }
             break;
-          case 'file-loaded':
-            play();
-            break;
           case 'end-file':
             newStatus.eofReached = true;
             newStatus.currentFile = null;
@@ -157,7 +153,7 @@ const usePlayer = (): Player => {
 
   const loadFile = async (file: string) => {
     await sendMpvCommand({ command: ['loadfile', file] });
-    await play();
+    await sendMpvCommand({ command: ['set_property', 'pause', false] });
   };
 
   const playlistPlay = async (index: number) => {
@@ -177,7 +173,6 @@ const usePlayer = (): Player => {
       await seek(0);
     }
     await sendMpvCommand({ command: ['set_property', 'pause', false] });
-    setState(prev => ({ ...prev, isPaused: false }));
   };
 
   const pause = async () => {
@@ -208,6 +203,7 @@ const usePlayer = (): Player => {
 
   return {
     ...state,
+    isPaused: state.isPaused || !state.currentFile,
     loadFile,
     playlistPlay,
     playlistNext,

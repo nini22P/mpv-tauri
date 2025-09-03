@@ -11,7 +11,7 @@ pub const IPC_PATH_BASE: &str = r"\\.\pipe\tauri_plugin_mpv_socket";
 pub const IPC_PATH_BASE: &str = "/tmp/tauri_plugin_mpv_socket";
 
 pub fn get_ipc_path(window_label: &str) -> String {
-    format!("{}_{}", IPC_PATH_BASE, window_label)
+    format!("{}_{}_{}", IPC_PATH_BASE, std::process::id(), window_label)
 }
 
 pub fn send_command(command_json: &str, window_label: &str) -> crate::Result<String> {

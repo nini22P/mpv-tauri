@@ -1,4 +1,4 @@
-# Tauri MPV Plugin
+# Tauri Plugin MPV
 
 A Tauri plugin that embeds MPV media player window into your Tauri applications.
 
