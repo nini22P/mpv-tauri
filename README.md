@@ -13,15 +13,7 @@ A Tauri plugin that embeds MPV media player window into your Tauri applications.
 ### Install the Plugin
 
 ```bash
-npm install tauri-plugin-mpv
-```
-
-### Add to Tauri
-
-Add the plugin to your `src-tauri/Cargo.toml`:
-
-```bash
-cargo add tauri-plugin-mpv
+npm run tauri add mpv
 ```
 
 Register the plugin in your Tauri app:
