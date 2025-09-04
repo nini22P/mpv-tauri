@@ -9,7 +9,7 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-use crate::{ipc::get_ipc_path, models::MpvEvent};
+use crate::ipc::get_ipc_path;
 
 pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
@@ -69,36 +69,12 @@ pub fn start_event_listener<R: Runtime>(
                 for line_result in reader.lines() {
                     match line_result {
                         Ok(line) => {
-                            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&line)
-                            {
-                                if let Some(event_name_val) = json_value.get("event") {
-                                    let _event_name = event_name_val.as_str().unwrap_or_default();
-
-                                    let mut payload_name: Option<String> = None;
-                                    if let Some(name_val) = json_value.get("name") {
-                                        payload_name = name_val.as_str().map(String::from);
-                                    }
-
-                                    let payload_data = json_value.get("data").cloned();
-
-                                    let payload = MpvEvent::property_change(
-                                        payload_name.unwrap_or_default(),
-                                        payload_data,
-                                    );
-
-                                    let event_name = format!("mpv-event-{}", window_label);
-
-                                    if let Err(e) =
-                                        app_handle.emit_to(&window_label, &event_name, &payload)
-                                    {
-                                        eprintln!(
-                                            "Failed to emit MPV event to window '{}': {}",
-                                            window_label, e
-                                        );
-                                    }
-                                }
-                            } else {
-                                eprintln!("Failed to parse mpv event line as JSON: {}", line);
+                            let event_name = format!("mpv-event-{}", window_label);
+                            if let Err(e) = app_handle.emit_to(&window_label, &event_name, &line) {
+                                eprintln!(
+                                    "Failed to emit MPV event to window '{}': {}",
+                                    window_label, e
+                                );
                             }
                         }
                         Err(e) => {
@@ -107,8 +83,10 @@ pub fn start_event_listener<R: Runtime>(
                         }
                     }
                 }
-
-                break;
+                println!(
+                    "MPV event listener disconnected for window '{}'.",
+                    window_label
+                );
             }
             Err(e) => {
                 eprintln!(
