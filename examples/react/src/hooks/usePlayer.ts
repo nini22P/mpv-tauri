@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { COMMON_PROPERTIES, initializeMpv, sendMpvCommand, listenMpvEvents, MpvPlaylistItem } from 'tauri-plugin-mpv-api';
+import { initializeMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties } from 'tauri-plugin-mpv-api';
 
-const OBSERVED_PROPERTIES = COMMON_PROPERTIES;
+const OBSERVED_PROPERTIES = [
+  'playlist',
+  'filename',
+  'pause',
+  'eof-reached',
+  'time-pos',
+  'duration',
+  'volume',
+  'mute',
+  'speed',
+] as const;
 
 export type Connection = 'pending' | 'connected' | 'error';
 
@@ -77,66 +87,59 @@ const usePlayer = (): Player => {
   }, [])
 
   useEffect(() => {
-    let unlistenPromise = listenMpvEvents<typeof OBSERVED_PROPERTIES[number]>((mpvEvent) => {
-      const { event } = mpvEvent;
-
-      if (event === 'property-change' && mpvEvent.name === 'time-pos') {
-        const now = Date.now();
-        if (now - lastUpdateTime.current < 250) {
-          return;
-        }
-        lastUpdateTime.current = now;
-      }
-
-      setState(prev => {
-        const newStatus = { ...prev };
-
-        if (newStatus.connection !== 'connected') {
-          newStatus.connection = 'connected';
+    let unlistenPromise = observeMpvProperties(
+      OBSERVED_PROPERTIES,
+      ({ name, data }) => {
+        if (name === 'time-pos') {
+          const now = Date.now();
+          if (now - lastUpdateTime.current < 250) {
+            return;
+          }
+          lastUpdateTime.current = now;
         }
 
-        switch (event) {
-          case 'property-change':
-            const { name, data } = mpvEvent
-            switch (name) {
-              case 'playlist':
-                newStatus.playlist = data;
-                break;
-              case 'filename':
-                newStatus.currentFile = data;
-                break;
-              case 'pause':
-                newStatus.isPaused = data;
-                break;
-              case 'eof-reached':
-                newStatus.eofReached = data ?? false;
-                break;
-              case 'time-pos':
-                newStatus.timePos = data ?? 0;
-                break;
-              case 'duration':
-                newStatus.duration = data ?? 0;
-                break;
-              case 'volume':
-                newStatus.volume = data;
-                break;
-              case 'mute':
-                newStatus.mute = data;
-                break;
-              case 'speed':
-                newStatus.speed = data;
-                break;
-              default:
-                break;
-            }
-            break;
-          default:
-            break;
-        }
+        setState(prev => {
+          const newStatus = { ...prev };
 
-        return newStatus;
+          if (newStatus.connection !== 'connected') {
+            newStatus.connection = 'connected';
+          }
+
+          switch (name) {
+            case 'playlist':
+              newStatus.playlist = data;
+              break;
+            case 'filename':
+              newStatus.currentFile = data;
+              break;
+            case 'pause':
+              newStatus.isPaused = data;
+              break;
+            case 'eof-reached':
+              newStatus.eofReached = data ?? false;
+              break;
+            case 'time-pos':
+              newStatus.timePos = data ?? 0;
+              break;
+            case 'duration':
+              newStatus.duration = data ?? 0;
+              break;
+            case 'volume':
+              newStatus.volume = data;
+              break;
+            case 'mute':
+              newStatus.mute = data;
+              break;
+            case 'speed':
+              newStatus.speed = data;
+              break;
+            default:
+              break;
+          }
+
+          return newStatus;
+        });
       });
-    })
 
     return () => {
       unlistenPromise.then(unlisten => unlisten());

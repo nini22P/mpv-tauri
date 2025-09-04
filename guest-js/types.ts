@@ -23,6 +23,7 @@ export interface MpvPropertyTypes {
   'volume': number;
   'mute': boolean;
   'speed': number;
+  'percent-pos'?: number;
 }
 
 export interface MpvCommand {
@@ -31,7 +32,7 @@ export interface MpvCommand {
 }
 
 export interface MpvCommandResponse {
-  data?: any;
+  data?: unknown;
   error: 'success' | string;
   request_id: number;
 }
@@ -73,54 +74,24 @@ interface MpvEventBase<E extends MpvEventType> {
   id?: number;
 }
 
-type SimpleEvent<E extends MpvEventType> = MpvEventBase<E>;
-
-export interface PropertyChangeEvent<T extends keyof MpvPropertyTypes> extends MpvEventBase<'property-change'> {
-  name: T;
-  data: MpvPropertyTypes[T];
+export interface PropertyChangeEvent extends MpvEventBase<'property-change'> {
+  name: string;
+  data: unknown;
 }
 
-export interface StartFileEvent extends MpvEventBase<'start-file'> {
-  playlist_entry_id?: number;
+export interface OtherMpvEvent extends MpvEventBase<Exclude<MpvEventType, 'property-change'>> {
+  [key: string]: unknown;
 }
 
-export interface EndFileEvent extends MpvEventBase<'end-file'> {
-  reason: 'eof' | 'stop' | 'quit' | 'error' | 'redirect' | 'unknown';
-  playlist_entry_id?: number;
-  file_error?: string;
-  playlist_insert_id?: number;
-  playlist_insert_num_entries?: number;
-}
+export type MpvEvent =
+  | PropertyChangeEvent
+  | OtherMpvEvent;
 
-export interface LogMessageEvent extends MpvEventBase<'log-message'> {
-  prefix: string;
-  level: string;
-  text: string;
-}
-
-export interface HookEvent extends MpvEventBase<'hook'> {
-  hook_id: number;
-}
-
-export interface CommandReplyEvent extends MpvEventBase<'get-property-reply' | 'set-property-reply' | 'command-reply'> {
-  result?: any;
-}
-
-export interface ClientMessageEvent extends MpvEventBase<'client-message'> {
-  args: string[];
-}
-
-export type MpvEvent<T extends string = string> =
-  | SimpleEvent<'file-loaded' | 'seek' | 'playback-restart' | 'shutdown' | 'video-reconfig' | 'audio-reconfig'>
-  | StartFileEvent
-  | (T extends keyof MpvPropertyTypes ? PropertyChangeEvent<T> : never)
-  | EndFileEvent
-  | LogMessageEvent
-  | HookEvent
-  | CommandReplyEvent
-  | ClientMessageEvent;
-
-export type MpvEventListener<T extends string = typeof COMMON_PROPERTIES[number]> = (event: MpvEvent<T>) => void;
+export type MpvPropertyEventFor<K extends string> = {
+  [P in K]: P extends keyof MpvPropertyTypes
+  ? { name: P; data: MpvPropertyTypes[P] }
+  : { name: P; data: unknown };
+}[K];
 
 export const COMMON_PROPERTIES = [
   'playlist',      // Playlist

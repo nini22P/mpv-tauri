@@ -1,4 +1,4 @@
-import { initializeMpv, listenMpvEvents, sendMpvCommand } from 'tauri-plugin-mpv-api';
+import { initializeMpv, observeMpvProperties, sendMpvCommand } from 'tauri-plugin-mpv-api';
 
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -7,7 +7,7 @@ const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as con
 try {
   console.log('🎬 Initializing MPV with properties:', OBSERVED_PROPERTIES);
   await initializeMpv({
-    observedProperties: OBSERVED_PROPERTIES,
+    observedProperties: Array.from(OBSERVED_PROPERTIES),
     mpvConfig: {
       'vo': 'gpu-next',
       'hwdec': 'auto',
@@ -19,29 +19,27 @@ try {
   console.error('🎬 MPV initialization failed:', error);
 }
 
-// Listen events
-const unlisten = await listenMpvEvents<typeof OBSERVED_PROPERTIES[number]>((mpvEvent) => {
-  if (mpvEvent.event === 'property-change') {
-    switch (mpvEvent.name) {
+// Observe properties
+const unlisten = await observeMpvProperties(
+  OBSERVED_PROPERTIES,
+  ({ name, data }) => {
+    switch (name) {
       case 'pause':
-        console.log('Playback paused state:', mpvEvent.data);
+        console.log('Playback paused state:', data);
         break;
       case 'time-pos':
-        // console.log('Current time position:', mpvEvent.data);
+        console.log('Current time position:', data);
         break;
       case 'duration':
-        if (typeof mpvEvent.data === 'number' && mpvEvent.data > 0) {
-          console.log('File is ready to play. Duration:', mpvEvent.data);
-        }
+        console.log('Duration:', data);
         break;
       case 'filename':
-        console.log('Current playing file:', mpvEvent.data);
+        console.log('Current playing file:', data);
         break;
     }
-  }
-});
+  });
 
-// Unlisten events when no longer needed
+// Unlisten when no longer needed
 // unlisten();
 
 // Load and play a file
