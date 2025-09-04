@@ -1,24 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { COMMON_PROPERTIES, initializeMpv, sendMpvCommand, listenMpvEvents } from 'tauri-plugin-mpv-api';
+import { COMMON_PROPERTIES, initializeMpv, sendMpvCommand, listenMpvEvents, MpvPlaylistItem } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = COMMON_PROPERTIES;
-
-interface PlaylistItem {
-  current?: boolean;
-  filename: string;
-  id: number;
-  playing?: boolean;
-  'playlist-path'?: string;
-}
 
 export type Connection = 'pending' | 'connected' | 'error';
 
 interface PlayerState {
   connection: Connection;
   isPaused: boolean;
-  playlist: PlaylistItem[];
-  currentFile: string | null;
+  playlist: MpvPlaylistItem[];
+  currentFile?: string;
   eofReached: boolean;
   timePos: number;
   duration: number;
@@ -46,10 +38,13 @@ interface PlayerActions {
 export type Player = PlayerState & PlayerActions;
 
 const usePlayer = (): Player => {
+
+  const lastUpdateTime = useRef(0);
+
   const [state, setState] = useState<PlayerState>({
     connection: 'pending',
     isPaused: true,
-    currentFile: null,
+    currentFile: undefined,
     playlist: [],
     eofReached: false,
     timePos: 0,
@@ -62,7 +57,7 @@ const usePlayer = (): Player => {
   });
 
   useEffect(() => {
-    const initMpv = async () => {
+    (async () => {
       try {
         console.log('🎬 Initializing MPV with properties:', OBSERVED_PROPERTIES);
         await initializeMpv({
@@ -78,14 +73,20 @@ const usePlayer = (): Player => {
         console.error('🎬 MPV initialization failed:', error);
         setState(prev => ({ ...prev, connection: 'error' }));
       }
-    };
-
-    initMpv();
+    })();
   }, [])
 
   useEffect(() => {
-    let unlistenEvent = listenMpvEvents<typeof OBSERVED_PROPERTIES[number]>((mpvEvent) => {
+    let unlistenPromise = listenMpvEvents<typeof OBSERVED_PROPERTIES[number]>((mpvEvent) => {
       const { event } = mpvEvent;
+
+      if (event === 'property-change' && mpvEvent.name === 'time-pos') {
+        const now = Date.now();
+        if (now - lastUpdateTime.current < 250) {
+          return;
+        }
+        lastUpdateTime.current = now;
+      }
 
       setState(prev => {
         const newStatus = { ...prev };
@@ -99,44 +100,35 @@ const usePlayer = (): Player => {
             const { name, data } = mpvEvent
             switch (name) {
               case 'playlist':
-                newStatus.playlist = Array.isArray(data) ? data : [];
+                newStatus.playlist = data;
                 break;
               case 'filename':
-                newStatus.currentFile = typeof data === 'string' ? data : null;
+                newStatus.currentFile = data;
                 break;
               case 'pause':
-                newStatus.isPaused = typeof data === 'boolean' ? data : true;
+                newStatus.isPaused = data;
                 break;
               case 'eof-reached':
-                newStatus.eofReached = typeof data === 'boolean' ? data : false;
+                newStatus.eofReached = data ?? false;
                 break;
               case 'time-pos':
-                newStatus.timePos = typeof data === 'number' ? data : newStatus.timePos;
+                newStatus.timePos = data ?? 0;
                 break;
               case 'duration':
-                newStatus.duration = typeof data === 'number' ? data : newStatus.duration;
+                newStatus.duration = data ?? 0;
                 break;
               case 'volume':
-                newStatus.volume = typeof data === 'number' ? data : newStatus.volume;
+                newStatus.volume = data;
                 break;
               case 'mute':
-                newStatus.mute = typeof data === 'boolean' ? data : newStatus.mute;
+                newStatus.mute = data;
                 break;
               case 'speed':
-                newStatus.speed = typeof data === 'number' ? data : newStatus.speed;
-                break;
-              case 'percent-pos':
-                newStatus.percentPos = typeof data === 'number' ? data : newStatus.percentPos;
+                newStatus.speed = data;
                 break;
               default:
                 break;
             }
-            break;
-          case 'end-file':
-            newStatus.eofReached = true;
-            newStatus.currentFile = null;
-            newStatus.timePos = 0;
-            newStatus.duration = 0;
             break;
           default:
             break;
@@ -147,7 +139,7 @@ const usePlayer = (): Player => {
     })
 
     return () => {
-      unlistenEvent.then(unlistenFn => unlistenFn());
+      unlistenPromise.then(unlisten => unlisten());
     };
   }, []);
 
