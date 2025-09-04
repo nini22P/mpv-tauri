@@ -7,8 +7,8 @@ import type {
   VideoMarginRatio,
   MpvConfig,
   MpvEvent,
-  MpvEventListener,
   MpvCommandResponse,
+  MpvPropertyEventFor,
 } from './types';
 
 import { COMMON_PROPERTIES } from './types';
@@ -74,32 +74,149 @@ export async function initializeMpv(
 }
 
 /**
- * Listen to MPV events for the current window
+ * Listen to MPV property change events for the current window
  * 
  * @example
  * ```typescript
- * const unlisten = await listenMpvEvents<typeof OBSERVED_PROPERTIES[number]>((mpvEvent) => {
- *   if (mpvEvent.event === 'property-change') {
- *     switch (mpvEvent.name) {
+ * import { observeMpvProperties } from 'tauri-plugin-mpv-api';
+ * 
+ * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
+ * 
+ * // Observe properties
+ * const unlisten = await observeMpvProperties(
+ *   OBSERVED_PROPERTIES,
+ *   ({ name, data }) => {
+ *     switch (name) {
  *       case 'pause':
- *         console.log('Playback paused state:', mpvEvent.data);
+ *         console.log('Playback paused state:', data);
  *         break;
  *       case 'time-pos':
- *         // console.log('Current time position:', mpvEvent.data);
+ *         console.log('Current time position:', data);
  *         break;
  *       case 'duration':
- *         if (typeof mpvEvent.data === 'number' && mpvEvent.data > 0) {
- *           console.log('File is ready to play. Duration:', mpvEvent.data);
- *         }
+ *         console.log('Duration:', data);
  *         break;
  *       case 'filename':
- *         console.log('Current playing file:', mpvEvent.data);
+ *         console.log('Current playing file:', data);
+ *         break;
+ *     }
+ *   });
+ * 
+ * // Unlisten when no longer needed
+ * unlisten();
+ * ```
+ *
+ * @param {string[]} properties - Properties to observe
+ * @param {function} callback - Function to call when MPV events are received
+ * @param {string} [windowLabel] - Target window label, defaults to current window
+ * @returns {Promise<UnlistenFn>} Function to call to stop listening
+ *
+ */
+export async function observeMpvProperties<T extends ReadonlyArray<string>>(
+  properties: T,
+  callback: (event: MpvPropertyEventFor<T[number]>) => void,
+  windowLabel?: string
+): Promise<UnlistenFn>;
+
+/**
+ * Listen to MPV property change events for the current window with common properties
+ * 
+ * @example
+ * ```typescript
+ * import { observeMpvProperties } from 'tauri-plugin-mpv-api';
+ * 
+ * // Observe properties
+ * const unlisten = await observeMpvProperties(
+ *   ({ name, data }) => {
+ *     switch (name) {
+ *       case 'pause':
+ *         console.log('Playback paused state:', data);
+ *         break;
+ *       case 'time-pos':
+ *         console.log('Current time position:', data);
+ *         break;
+ *       case 'duration':
+ *         console.log('Duration:', data);
+ *         break;
+ *       case 'filename':
+ *         console.log('Current playing file:', data);
+ *         break;
+ *     }
+ *   });
+ * 
+ * // Unlisten when no longer needed
+ * unlisten();
+ * ```
+ *
+ * @param {function} callback - Function to call when MPV events are received
+ * @param {string} [windowLabel] - Target window label, defaults to current window
+ * @returns {Promise<UnlistenFn>} Function to call to stop listening
+ *
+ */
+export async function observeMpvProperties(
+  callback: (event: MpvPropertyEventFor<typeof COMMON_PROPERTIES[number]>) => void,
+  windowLabel?: string
+): Promise<UnlistenFn>;
+
+export async function observeMpvProperties(
+  arg1: ReadonlyArray<string> | ((event: any) => void),
+  arg2?: ((event: any) => void) | string,
+  arg3?: string
+): Promise<UnlistenFn> {
+  let properties: ReadonlyArray<string>;
+  let callback: (event: any) => void;
+  let windowLabel: string | undefined;
+
+  if (typeof arg1 === 'function') {
+    properties = COMMON_PROPERTIES;
+    callback = arg1;
+    windowLabel = arg2 as string | undefined;
+  } else {
+    properties = arg1;
+    callback = arg2 as (event: any) => void;
+    windowLabel = arg3;
+  }
+
+  const unlisten = await listenMpvEvents((event) => {
+    if (event.event === 'property-change') {
+      if (properties.includes(event.name)) {
+        callback(event);
+      }
+    }
+  }, windowLabel);
+
+  return unlisten;
+}
+
+/**
+ * Listen to all MPV events for the current window
+ * 
+ * @example
+ * ```typescript
+ * import { listenMpvEvents } from 'tauri-plugin-mpv-api';
+ * 
+ * // Listen events
+ * const unlisten = await listenMpvEvents((mpvEvent) => {
+ *   if (mpvEvent.event === 'property-change') {
+ *     const { name, data } = mpvEvent
+ *     switch (name) {
+ *       case 'pause':
+ *         console.log('Playback paused state:', data);
+ *         break;
+ *       case 'time-pos':
+ *         console.log('Current time position:', data);
+ *         break;
+ *       case 'duration':
+ *         console.log('Duration:', data);
+ *         break;
+ *       case 'filename':
+ *         console.log('Current playing file:', data);
  *         break;
  *     }
  *   }
  * });
  * 
- * // Unlisten events when no longer needed
+ * // Unlisten when no longer needed
  * unlisten();
  * ```
  *
@@ -109,8 +226,8 @@ export async function initializeMpv(
  * @returns {Promise<UnlistenFn>} Function to call to stop listening
  *
  */
-export async function listenMpvEvents<T extends typeof COMMON_PROPERTIES[number]>(
-  callback: MpvEventListener<T>,
+export async function listenMpvEvents(
+  callback: (event: MpvEvent) => void,
   windowLabel?: string
 ): Promise<UnlistenFn> {
 
@@ -121,22 +238,17 @@ export async function listenMpvEvents<T extends typeof COMMON_PROPERTIES[number]
   const eventName = `mpv-event-${windowLabel}`;
 
   try {
-    const unlisten = await listen<MpvEvent<T>>(eventName, (event) => callback(event.payload));
-
-    console.log(`✅ MPV event listener is active for window: ${windowLabel}, event: ${eventName}`);
-
+    const unlisten = await listen<MpvEvent>(eventName, (event) => callback(event.payload));
+    console.log(`✅ Raw MPV event listener is active for window: ${windowLabel}`);
     return unlisten;
   } catch (error) {
-    console.error(`❌ Failed to set up MPV event listener for window: ${windowLabel}`, error);
+    console.error(`❌ Failed to set up raw MPV event listener for window: ${windowLabel}`, error);
     return Promise.reject(error);
   }
 }
 
 /**
  * Send MPV command
- * 
- * If you want to observe property changes, use `initializeMpv` to specify properties to observe.
- * Do not use this API to observe property changes.
  * 
  * @example
  * ```typescript
