@@ -21,7 +21,7 @@ try {
 }
 
 // Destroy MPV when no longer needed
-// await destroyMpv();
+await destroyMpv();
 
 // Observe properties
 const unlisten = await observeMpvProperties(
@@ -44,7 +44,7 @@ const unlisten = await observeMpvProperties(
   });
 
 // Unlisten when no longer needed
-// unlisten();
+unlisten();
 
 // Load and play a file
 await sendMpvCommand({ command: ['loadfile', '/path/to/video.mp4'] });
