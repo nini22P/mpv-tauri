@@ -4,13 +4,18 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::{events, ipc, models::*, process};
+use crate::{
+    events,
+    ipc::{self, get_ipc_pipe},
+    models::*,
+    process,
+};
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
     _api: PluginApi<R, C>,
 ) -> crate::Result<Mpv<R>> {
-    println!("Tauri Plugin MPV: Plugin registered successfully. Call initializeMpv() from frontend when ready.");
+    println!("[Tauri Plugin MPV] Plugin registered.");
     let mpv = Mpv(app.clone());
     Ok(mpv)
 }
@@ -24,35 +29,31 @@ impl<R: Runtime> Mpv<R> {
         window_label: Option<String>,
         mpv_config: Option<HashMap<String, Value>>,
     ) -> crate::Result<String> {
-        println!("Tauri Plugin MPV: Starting MPV initialization from frontend...");
-
         let target_window = window_label.as_deref().unwrap_or("main").to_string();
+
+        println!(
+            "[Tauri Plugin MPV] Initializing MPV for window '{}'...",
+            target_window
+        );
+
+        let ipc_pipe = get_ipc_pipe(&target_window);
+
+        println!("[Tauri Plugin MPV] - Using IPC pipe: {}", ipc_pipe);
 
         let properties = observed_properties.unwrap_or_default();
 
         println!(
-            "Tauri Plugin MPV: Will observe properties: {:?}",
-            properties
+            "[Tauri Plugin MPV] - Properties to observe: [\"{}\"]",
+            properties.join("\", \"")
         );
 
         let app_handle = self.0.clone();
 
-        println!(
-            "Tauri Plugin MPV: Looking for window '{}'...",
-            target_window
-        );
         if let Some(webview_window) = app_handle.get_webview_window(&target_window) {
-            println!(
-                "Tauri Plugin MPV: Found window '{}', getting handle...",
-                target_window
-            );
             let handle_result = webview_window.window_handle();
 
             match handle_result {
                 Ok(handle_wrapper) => {
-                    println!(
-                        "Tauri Plugin MPV: Got window handle wrapper, extracting raw handle..."
-                    );
                     let raw_handle = handle_wrapper.as_raw();
                     let window_handle = match raw_handle {
                         RawWindowHandle::Win32(handle) => handle.hwnd.get() as i64,
@@ -60,7 +61,7 @@ impl<R: Runtime> Mpv<R> {
                         RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
                         _ => {
                             eprintln!(
-                                "Tauri Plugin MPV: Unsupported window handle type for mpv --wid"
+                                "[Tauri Plugin MPV] Unsupported window handle type for MPV --wid"
                             );
                             return Err(crate::Error::UnsupportedPlatform);
                         }
@@ -68,6 +69,11 @@ impl<R: Runtime> Mpv<R> {
 
                     let mpv_config_clone = mpv_config.clone();
                     let target_window_clone_for_process = target_window.clone();
+
+                    println!(
+                        "[Tauri Plugin MPV] - Starting MPV process with WID: {}",
+                        window_handle
+                    );
 
                     process::init_mpv_process(
                         window_handle,
@@ -86,19 +92,21 @@ impl<R: Runtime> Mpv<R> {
                     });
                 }
                 Err(e) => {
-                    eprintln!("Tauri Plugin MPV: Failed to get raw window handle: {:?}", e);
+                    eprintln!(
+                        "[Tauri Plugin MPV] Failed to get raw window handle: {:?}",
+                        e
+                    );
                     return Err(crate::Error::WindowHandleError);
                 }
             }
         } else {
             eprintln!(
-                "Tauri Plugin MPV: Window '{}' not found! Make sure your window exists with this label",
+                "[Tauri Plugin MPV] Window '{}' not found! Make sure your window exists with this label",
                 target_window
             );
             return Err(crate::Error::WindowHandleError);
         }
 
-        println!("Tauri Plugin MPV: MPV initialization completed successfully!");
         Ok(target_window)
     }
 
