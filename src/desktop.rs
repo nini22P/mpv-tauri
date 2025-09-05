@@ -25,8 +25,8 @@ impl<R: Runtime> Mpv<R> {
     pub fn initialize_mpv(
         &self,
         observed_properties: Vec<String>,
-        window_label: String,
         mpv_config: HashMap<String, Value>,
+        window_label: &str,
     ) -> crate::Result<String> {
         let app_handle = self.0.clone();
 
@@ -52,9 +52,9 @@ impl<R: Runtime> Mpv<R> {
                     process::init_mpv_process(
                         app_handle,
                         window_handle,
-                        window_label.clone(),
                         mpv_config,
                         observed_properties,
+                        window_label,
                     )?;
                 }
                 Err(e) => {
@@ -74,13 +74,13 @@ impl<R: Runtime> Mpv<R> {
             return Err(crate::Error::WindowHandleError);
         }
 
-        Ok(window_label)
+        Ok(window_label.to_string())
     }
 
     pub fn send_mpv_command(
         &self,
-        command_json: String,
-        window_label: String,
+        command_json: &str,
+        window_label: &str,
     ) -> crate::Result<MpvCommandResponse> {
         ipc::send_command(command_json, window_label)
     }
@@ -88,14 +88,14 @@ impl<R: Runtime> Mpv<R> {
     pub fn set_video_margin_ratio(
         &self,
         ratio: VideoMarginRatio,
-        window_label: String,
+        window_label: &str,
     ) -> crate::Result<()> {
         if let Some(left) = ratio.left {
             let command = format!(
                 r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
                 left
             );
-            ipc::send_command(command, window_label.clone())?;
+            ipc::send_command(&command, window_label)?;
         }
 
         if let Some(right) = ratio.right {
@@ -103,7 +103,7 @@ impl<R: Runtime> Mpv<R> {
                 r#"{{"command": ["set_property", "video-margin-ratio-right", {}]}}"#,
                 right
             );
-            ipc::send_command(command, window_label.clone())?;
+            ipc::send_command(&command, window_label)?;
         }
 
         if let Some(top) = ratio.top {
@@ -111,7 +111,7 @@ impl<R: Runtime> Mpv<R> {
                 r#"{{"command": ["set_property", "video-margin-ratio-top", {}]}}"#,
                 top
             );
-            ipc::send_command(command, window_label.clone())?;
+            ipc::send_command(&command, window_label)?;
         }
 
         if let Some(bottom) = ratio.bottom {
@@ -119,13 +119,13 @@ impl<R: Runtime> Mpv<R> {
                 r#"{{"command": ["set_property", "video-margin-ratio-bottom", {}]}}"#,
                 bottom
             );
-            ipc::send_command(command, window_label)?;
+            ipc::send_command(&command, window_label)?;
         }
 
         Ok(())
     }
 
-    pub fn destroy_mpv(&self, window_label: String) -> crate::Result<()> {
+    pub fn destroy_mpv(&self, window_label: &str) -> crate::Result<()> {
         process::kill_mpv_process(window_label)
     }
 }
