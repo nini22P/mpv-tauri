@@ -1,5 +1,6 @@
 const COMMANDS: &[&str] = &[
     "initialize_mpv",
+    "destroy_mpv",
     "send_mpv_command",
     "set_video_margin_ratio",
 ];

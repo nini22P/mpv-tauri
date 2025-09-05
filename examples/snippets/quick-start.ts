@@ -1,4 +1,5 @@
-import { initializeMpv, observeMpvProperties, sendMpvCommand } from 'tauri-plugin-mpv-api';
+import { destroyMpv, initializeMpv, observeMpvProperties, sendMpvCommand } from "tauri-plugin-mpv-api";
+
 
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -18,6 +19,9 @@ try {
 } catch (error) {
   console.error('MPV initialization failed:', error);
 }
+
+// Destroy MPV when no longer needed
+// await destroyMpv();
 
 // Observe properties
 const unlisten = await observeMpvProperties(
