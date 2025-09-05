@@ -69,7 +69,7 @@ const usePlayer = (): Player => {
   useEffect(() => {
     (async () => {
       try {
-        console.log('🎬 Initializing MPV with properties:', OBSERVED_PROPERTIES);
+        console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
         await initializeMpv({
           observedProperties: Array.from(OBSERVED_PROPERTIES),
           mpvConfig: {
@@ -78,9 +78,9 @@ const usePlayer = (): Player => {
             'media-controls': 'no',
           }
         });
-        console.log('🎬 MPV initialization completed successfully!');
+        console.log('MPV initialization completed successfully!');
       } catch (error) {
-        console.error('🎬 MPV initialization failed:', error);
+        console.error('MPV initialization failed:', error);
         setState(prev => ({ ...prev, connection: 'error' }));
       }
     })();

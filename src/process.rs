@@ -10,12 +10,12 @@ pub fn init_mpv_process(
     mpv_config: Option<HashMap<String, Value>>,
 ) -> crate::Result<()> {
     println!(
-        "Attempting to start mpv with WID: {} for window: {}",
+        "Tauri Plugin MPV: Attempting to start mpv with WID: {} for window: {}",
         window_handle, window_label
     );
 
     let ipc_path = get_ipc_path(window_label);
-    println!("Using IPC path: {}", ipc_path);
+    println!("Tauri Plugin MPV: Using IPC path: {}", ipc_path);
 
     // Default MPV arguments
     let mut args = vec![
@@ -39,7 +39,7 @@ pub fn init_mpv_process(
                 Value::Bool(false) => format!("--no-{}", key),
                 _ => {
                     println!(
-                        "🎬 MPV Plugin: Unsupported config value type for key: {}",
+                        "Tauri Plugin MPV: Unsupported config value type for key: {}",
                         key
                     );
                     continue;
@@ -47,13 +47,13 @@ pub fn init_mpv_process(
             };
             args.push(arg);
             println!(
-                "🎬 MPV Plugin: Added config option: {}",
+                "Tauri Plugin MPV: Added config option: {}",
                 args.last().unwrap()
             );
         }
     }
 
-    println!("MPV command: mpv {}", args.join(" "));
+    println!("Tauri Plugin MPV: mpv {}", args.join(" "));
 
     let args_clone = args.clone();
     match Command::new("mpv")
@@ -63,16 +63,22 @@ pub fn init_mpv_process(
         .spawn()
     {
         Ok(child) => {
-            println!("MPV process started successfully with PID: {}", child.id());
+            println!(
+                "Tauri Plugin MPV: MPV process started successfully with PID: {}",
+                child.id()
+            );
             Ok(())
         }
         Err(e) => {
             let error_message = format!(
-                "Failed to start mpv: {}. Is mpv installed and in your PATH?",
+                "Tauri Plugin MPV: Failed to start mpv: {}. Is mpv installed and in your PATH?",
                 e
             );
             eprintln!("{}", error_message);
-            eprintln!("Attempted command: mpv {}", args_clone.join(" "));
+            eprintln!(
+                "Tauri Plugin MPV: Attempted command: mpv {}",
+                args_clone.join(" ")
+            );
             Err(crate::Error::MpvProcessError(error_message))
         }
     }

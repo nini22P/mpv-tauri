@@ -240,22 +240,12 @@ export async function listenMpvEvents(
   const eventName = `mpv-event-${windowLabel}`;
 
   try {
-    const unlisten = await listen<string>(eventName, (event) => {
-      try {
-        const parsedEvent = JSON.parse(event.payload) as MpvEvent;
-        if (parsedEvent.event === undefined) {
-          return;
-        }
-        callback(parsedEvent);
-      } catch (e) {
-        console.error("Failed to parse MPV event JSON:", event.payload, e);
-      }
-    });
+    const unlisten = await listen<MpvEvent>(eventName, (event) => callback(event.payload));
 
-    console.log(`✅ Raw MPV event listener is active for window: ${windowLabel}`);
+    console.log(`Raw MPV event listener is active for window: ${windowLabel}`);
     return unlisten;
   } catch (error) {
-    console.error(`❌ Failed to set up raw MPV event listener for window: ${windowLabel}`, error);
+    console.error(`Failed to set up raw MPV event listener for window: ${windowLabel}`, error);
     return Promise.reject(error);
   }
 }
@@ -305,12 +295,10 @@ export async function sendMpvCommand(
     windowLabel = getCurrentWindow().label;
   }
 
-  const response = await invoke<string>('plugin:mpv|send_mpv_command', {
+  return await invoke<MpvCommandResponse>('plugin:mpv|send_mpv_command', {
     commandJson,
     windowLabel,
   });
-
-  return JSON.parse(response);
 }
 
 /**

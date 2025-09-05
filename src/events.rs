@@ -9,7 +9,7 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-use crate::ipc::get_ipc_path;
+use crate::{ipc::get_ipc_path, MpvEvent};
 
 pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
@@ -17,10 +17,13 @@ pub fn start_event_listener<R: Runtime>(
     window_label: String,
 ) {
     let ipc_path = get_ipc_path(&window_label);
-    println!("Event listener using IPC path: {}", ipc_path);
+    println!(
+        "Tauri Plugin MPV: Event listener using IPC path: {}",
+        ipc_path
+    );
 
-    println!("Waiting for MPV IPC server to be ready...");
-    std::thread::sleep(Duration::from_secs(3));
+    println!("Tauri Plugin MPV: Waiting for MPV IPC server to be ready...");
+    std::thread::sleep(Duration::from_secs(1));
 
     let max_retries = 5;
     let mut retry_count = 0;
@@ -28,7 +31,7 @@ pub fn start_event_listener<R: Runtime>(
     loop {
         retry_count += 1;
         println!(
-            "Attempting to connect to MPV IPC (attempt {}/{})",
+            "Tauri Plugin MPV: Attempting to connect to MPV IPC (attempt {}/{})",
             retry_count, max_retries
         );
 
@@ -40,7 +43,11 @@ pub fn start_event_listener<R: Runtime>(
 
         match stream_result {
             Ok(mut stream) => {
-                println!("Successfully connected to mpv IPC for event listening.");
+                println!(
+                    "Tauri Plugin MPV: Successfully connected to mpv IPC for event listening."
+                );
+
+                retry_count = 0;
 
                 let observe_commands: Vec<String> = properties
                     .iter()
@@ -59,9 +66,9 @@ pub fn start_event_listener<R: Runtime>(
                         && stream.write_all(b"\n").is_ok()
                     {
                         stream.flush().ok();
-                        println!("Sent: {}", cmd_str);
+                        println!("Tauri Plugin MPV: Sent: {}", cmd_str);
                     } else {
-                        eprintln!("Failed to send: {}", cmd_str);
+                        eprintln!("Tauri Plugin MPV: Failed to send: {}", cmd_str);
                     }
                 }
 
@@ -69,37 +76,49 @@ pub fn start_event_listener<R: Runtime>(
                 for line_result in reader.lines() {
                     match line_result {
                         Ok(line) => {
-                            let event_name = format!("mpv-event-{}", window_label);
-                            if let Err(e) = app_handle.emit_to(&window_label, &event_name, &line) {
+                            if let Ok(payload) = serde_json::from_str::<MpvEvent>(&line) {
+                                if payload.event.is_some() {
+                                    let event_name = format!("mpv-event-{}", window_label);
+
+                                    if let Err(e) =
+                                        app_handle.emit_to(&window_label, &event_name, &payload)
+                                    {
+                                        eprintln!(
+                                            "Tauri Plugin MPV: Failed to emit MPV event to window '{}': {}",
+                                            window_label, e
+                                        );
+                                    }
+                                }
+                            } else {
                                 eprintln!(
-                                    "Failed to emit MPV event to window '{}': {}",
-                                    window_label, e
+                                    "Tauri Plugin MPV: Failed to parse mpv event line as JSON: {}",
+                                    line
                                 );
                             }
                         }
                         Err(e) => {
-                            eprintln!("Error reading from mpv IPC: {}", e);
+                            eprintln!("Tauri Plugin MPV: Error reading from mpv IPC: {}", e);
                             break;
                         }
                     }
                 }
                 println!(
-                    "MPV event listener disconnected for window '{}'.",
+                    "Tauri Plugin MPV: MPV event listener disconnected for window '{}'.",
                     window_label
                 );
             }
             Err(e) => {
                 eprintln!(
-                    "Failed to connect to mpv IPC for event listening at '{}' (attempt {}/{}): {}",
+                    "Tauri Plugin MPV: Failed to connect to mpv IPC for event listening at '{}' (attempt {}/{}): {}",
                     ipc_path, retry_count, max_retries, e
                 );
 
                 if retry_count >= max_retries {
-                    eprintln!("Max retries reached. MPV IPC connection failed.");
+                    eprintln!("Tauri Plugin MPV: Max retries reached. MPV IPC connection failed.");
                     break;
                 }
 
-                println!("Retrying in 2 seconds...");
+                println!("Tauri Plugin MPV: Retrying in 2 seconds...");
                 std::thread::sleep(Duration::from_secs(2));
             }
         }

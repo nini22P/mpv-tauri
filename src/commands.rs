@@ -2,9 +2,10 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tauri::{command, AppHandle, Runtime};
 
-use crate::models::*;
+use crate::MpvCommandResponse;
 use crate::MpvExt;
 use crate::Result;
+use crate::VideoMarginRatio;
 
 #[command]
 pub(crate) async fn initialize_mpv<R: Runtime>(
@@ -22,7 +23,7 @@ pub(crate) async fn send_mpv_command<R: Runtime>(
     app: AppHandle<R>,
     command_json: String,
     window_label: &str,
-) -> Result<String> {
+) -> Result<MpvCommandResponse> {
     app.mpv().send_mpv_command(&command_json, window_label)
 }
 
