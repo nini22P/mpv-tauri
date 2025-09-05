@@ -2,25 +2,19 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
-use crate::ipc::get_ipc_path;
+use crate::ipc::get_ipc_pipe;
 
 pub fn init_mpv_process(
     window_handle: i64,
     window_label: &str,
     mpv_config: Option<HashMap<String, Value>>,
 ) -> crate::Result<()> {
-    println!(
-        "Tauri Plugin MPV: Attempting to start mpv with WID: {} for window: {}",
-        window_handle, window_label
-    );
-
-    let ipc_path = get_ipc_path(window_label);
-    println!("Tauri Plugin MPV: Using IPC path: {}", ipc_path);
+    let ipc_pipe = get_ipc_pipe(window_label);
 
     // Default MPV arguments
     let mut args = vec![
         format!("--wid={}", window_handle),
-        format!("--input-ipc-server={}", ipc_path),
+        format!("--input-ipc-server={}", ipc_pipe),
         "--idle=yes".to_string(),
         "--force-window".to_string(),
         "--keep-open=yes".to_string(),
@@ -39,21 +33,17 @@ pub fn init_mpv_process(
                 Value::Bool(false) => format!("--no-{}", key),
                 _ => {
                     println!(
-                        "Tauri Plugin MPV: Unsupported config value type for key: {}",
+                        "[Tauri Plugin MPV] Unsupported config value type for key: {}",
                         key
                     );
                     continue;
                 }
             };
             args.push(arg);
-            println!(
-                "Tauri Plugin MPV: Added config option: {}",
-                args.last().unwrap()
-            );
         }
     }
 
-    println!("Tauri Plugin MPV: mpv {}", args.join(" "));
+    println!("[Tauri Plugin MPV] mpv {}", &args.join(" "));
 
     let args_clone = args.clone();
     match Command::new("mpv")
@@ -64,21 +54,18 @@ pub fn init_mpv_process(
     {
         Ok(child) => {
             println!(
-                "Tauri Plugin MPV: MPV process started successfully with PID: {}",
+                "[Tauri Plugin MPV] MPV process started (PID: {}). Initialization complete",
                 child.id()
             );
             Ok(())
         }
         Err(e) => {
             let error_message = format!(
-                "Tauri Plugin MPV: Failed to start mpv: {}. Is mpv installed and in your PATH?",
+                "[Tauri Plugin MPV] Failed to start MPV: {}. Is mpv installed and in your PATH?",
                 e
             );
             eprintln!("{}", error_message);
-            eprintln!(
-                "Tauri Plugin MPV: Attempted command: mpv {}",
-                args_clone.join(" ")
-            );
+            eprintln!("[Tauri Plugin MPV] mpv {}", args_clone.join(" "));
             Err(crate::Error::MpvProcessError(error_message))
         }
     }

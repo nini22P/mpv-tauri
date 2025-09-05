@@ -177,7 +177,7 @@ export async function observeMpvProperties(
     windowLabel = arg3;
   }
 
-  const unlisten = await listenMpvEvents(
+  return await listenMpvEvents(
     (mpvEvent) => {
       if (mpvEvent.event === 'property-change') {
         if (properties.includes(mpvEvent.name)) {
@@ -187,8 +187,6 @@ export async function observeMpvProperties(
     },
     windowLabel,
   );
-
-  return unlisten;
 }
 
 /**
@@ -239,15 +237,7 @@ export async function listenMpvEvents(
 
   const eventName = `mpv-event-${windowLabel}`;
 
-  try {
-    const unlisten = await listen<MpvEvent>(eventName, (event) => callback(event.payload));
-
-    console.log(`Raw MPV event listener is active for window: ${windowLabel}`);
-    return unlisten;
-  } catch (error) {
-    console.error(`Failed to set up raw MPV event listener for window: ${windowLabel}`, error);
-    return Promise.reject(error);
-  }
+  return await listen<MpvEvent>(eventName, (event) => callback(event.payload));
 }
 
 /**

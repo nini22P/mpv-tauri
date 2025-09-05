@@ -43,7 +43,8 @@
   "scripts": {
     "build": "rollup -c",
     "prepublishOnly": "npm run build",
-    "pretest": "npm run build"
+    "pretest": "npm run build",
+    "examples:react": "npm run build && cd examples/react && npm run tauri dev"
   },
   "dependencies": {
     "@tauri-apps/api": "2"
