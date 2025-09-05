@@ -44,8 +44,8 @@ export * from './types';
  *
  * @param {object} [options={}] - Initialization options.
  * @param {readonly string[]} [options.observedProperties] - A list of MPV properties to observe. Defaults to a common set of properties.
- * @param {string} [options.windowLabel] - The label of the target window. Defaults to the current window's label.
  * @param {MpvConfig} [options.mpvConfig] - A map of MPV configuration options to apply on startup.
+ * @param {string} [options.windowLabel] - The label of the target window. Defaults to the current window's label.
  * @returns {Promise<string>} A promise that resolves with the actual window label used for initialization.
  *
  * @throws {Error} Throws an error if MPV initialization fails (e.g., mpv executable not in PATH).
@@ -53,12 +53,12 @@ export * from './types';
 export async function initializeMpv(
   {
     observedProperties,
-    windowLabel,
     mpvConfig,
+    windowLabel,
   }: {
     observedProperties?: readonly string[],
-    windowLabel?: string,
     mpvConfig?: MpvConfig,
+    windowLabel?: string,
   } = {}
 ): Promise<string> {
 
@@ -72,8 +72,8 @@ export async function initializeMpv(
 
   return await invoke<string>('plugin:mpv|initialize_mpv', {
     observedProperties,
-    windowLabel,
     mpvConfig,
+    windowLabel,
   });
 }
 

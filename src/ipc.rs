@@ -16,10 +16,7 @@ pub fn get_ipc_pipe(window_label: &str) -> String {
     format!("{}_{}_{}", IPC_PIPE_BASE, std::process::id(), window_label)
 }
 
-pub fn send_command(
-    command_json: String,
-    window_label: String,
-) -> crate::Result<MpvCommandResponse> {
+pub fn send_command(command_json: &str, window_label: &str) -> crate::Result<MpvCommandResponse> {
     println!("[Tauri Plugin MPV][{}] SEND {}", window_label, command_json);
 
     let ipc_pipe = get_ipc_pipe(&window_label);
@@ -53,8 +50,8 @@ pub fn send_command(
 
 fn process_mpv_command<S: Read + Write>(
     mut stream: S,
-    command_json: String,
-    window_label: String,
+    command_json: &str,
+    window_label: &str,
 ) -> crate::Result<MpvCommandResponse> {
     stream.write_all(command_json.as_bytes()).map_err(|e| {
         crate::Error::IpcError(format!(

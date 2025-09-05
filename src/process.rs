@@ -4,7 +4,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, Runtime};
 
-use crate::events;
+use crate::events::{self, stop_event_listener};
 use crate::ipc::get_ipc_pipe;
 
 lazy_static::lazy_static! {
@@ -14,19 +14,19 @@ lazy_static::lazy_static! {
 pub fn init_mpv_process<R: Runtime>(
     app_handle: AppHandle<R>,
     window_handle: i64,
-    window_label: String,
     mpv_config: HashMap<String, Value>,
     observed_properties: Vec<String>,
+    window_label: &str,
 ) -> crate::Result<()> {
     let mut processes = MPV_PROCESSES.lock().unwrap();
-    if let Some(child) = processes.get_mut(&window_label) {
+    if let Some(child) = processes.get_mut(window_label) {
         match child.try_wait() {
             Ok(Some(_status)) => {
                 println!(
                     "[Tauri Plugin MPV][{}] Stale MPV process found and removed. Re-initializing...",
                     window_label,
                 );
-                processes.remove(&window_label);
+                processes.remove(window_label);
             }
             Ok(None) => {
                 println!(
@@ -138,10 +138,12 @@ pub fn init_mpv_process<R: Runtime>(
     }
 }
 
-pub fn kill_mpv_process(window_label: String) -> crate::Result<()> {
+pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
+    stop_event_listener(window_label);
+
     let mut processes = MPV_PROCESSES.lock().unwrap();
 
-    if let Some(mut child) = processes.remove(&window_label) {
+    if let Some(mut child) = processes.remove(window_label) {
         println!(
             "[Tauri Plugin MPV][{}] Attempting to kill MPV process for window '{}' (PID: {})...",
             window_label,
