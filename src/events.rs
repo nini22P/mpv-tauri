@@ -1,5 +1,10 @@
 use std::{
+    collections::HashMap,
     io::{BufRead, BufReader, Write},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
     time::Duration,
 };
 use tauri::{AppHandle, Emitter, Runtime};
@@ -11,17 +16,36 @@ use std::os::unix::net::UnixStream;
 
 use crate::{ipc::get_ipc_pipe, MpvEvent};
 
+lazy_static::lazy_static! {
+   pub static ref LISTENER_STOP_SIGNALS: Mutex<HashMap<String, Arc<AtomicBool>>> = Mutex::new(HashMap::new());
+}
+
 pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
     observed_properties: Vec<String>,
     window_label: String,
 ) {
+    let stop_signal = Arc::new(AtomicBool::new(true));
+
+    {
+        let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
+        signals.insert(window_label.to_string(), Arc::clone(&stop_signal));
+    }
+
     let ipc_pipe = get_ipc_pipe(&window_label);
 
     let max_retries = 5;
     let mut retry_count = 0;
 
     loop {
+        if !stop_signal.load(Ordering::Relaxed) {
+            println!(
+                "[Tauri Plugin MPV][{}] Event listener received stop signal. Exiting loop.",
+                window_label
+            );
+            break;
+        }
+
         retry_count += 1;
 
         println!(
@@ -93,6 +117,10 @@ pub fn start_event_listener<R: Runtime>(
 
                 let reader = BufReader::new(stream);
                 for line_result in reader.lines() {
+                    if !stop_signal.load(Ordering::Relaxed) {
+                        break;
+                    }
+
                     match line_result {
                         Ok(line) => {
                             if let Ok(payload) = serde_json::from_str::<MpvEvent>(&line) {
@@ -152,5 +180,25 @@ pub fn start_event_listener<R: Runtime>(
                 std::thread::sleep(Duration::from_secs(1));
             }
         }
+
+        {
+            let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
+            signals.remove(&window_label);
+            println!(
+                "[Tauri Plugin MPV][{}] Event listener has stopped and cleaned up its signal.",
+                window_label
+            );
+        }
+    }
+}
+
+pub fn stop_event_listener(window_label: &str) {
+    let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
+    if let Some(stop_signal) = signals.remove(window_label) {
+        stop_signal.store(false, Ordering::SeqCst);
+        println!(
+            "[Tauri Plugin MPV][{}] Stop signal sent to event listener.",
+            window_label
+        );
     }
 }
