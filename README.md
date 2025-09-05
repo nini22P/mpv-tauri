@@ -59,7 +59,7 @@ const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as con
 try {
   console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
   await initializeMpv({
-    observedProperties: Array.from(OBSERVED_PROPERTIES),
+    observedProperties: OBSERVED_PROPERTIES,
     mpvConfig: {
       'vo': 'gpu-next',
       'hwdec': 'auto',

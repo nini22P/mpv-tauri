@@ -26,7 +26,7 @@ export * from './types';
  * 
  * try {
  *   await initializeMpv({
- *     observedProperties: Array.from(OBSERVED_PROPERTIES),
+ *     observedProperties: OBSERVED_PROPERTIES,
  *     mpvConfig: {
  *       'vo': 'gpu-next',
  *       'hwdec': 'auto',
