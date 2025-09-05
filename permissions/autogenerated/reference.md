@@ -5,6 +5,7 @@ Default permissions for the plugin
 #### This default permission set includes the following:
 
 - `allow-initialize-mpv`
+- `allow-destroy-mpv`
 - `allow-send-mpv-command`
 - `allow-set-video-margin-ratio`
 
@@ -16,6 +17,32 @@ Default permissions for the plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`mpv:allow-destroy-mpv`
+
+</td>
+<td>
+
+Enables the destroy_mpv command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mpv:deny-destroy-mpv`
+
+</td>
+<td>
+
+Denies the destroy_mpv command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>

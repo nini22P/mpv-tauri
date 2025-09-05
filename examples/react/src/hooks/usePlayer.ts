@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { initializeMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties } from 'tauri-plugin-mpv-api';
+import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = [
   'playlist',
@@ -49,7 +49,6 @@ export type Player = PlayerState & PlayerActions;
 
 const usePlayer = (): Player => {
 
-  const mpvInitialized = useRef(false);
   const lastUpdateTime = useRef(0);
 
   const [state, setState] = useState<PlayerState>({
@@ -68,27 +67,32 @@ const usePlayer = (): Player => {
   });
 
   useEffect(() => {
-    if (!mpvInitialized.current) {
-      mpvInitialized.current = true;
-      (async () => {
-        try {
-          console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
-          await initializeMpv({
-            observedProperties: OBSERVED_PROPERTIES,
-            mpvConfig: {
-              'vo': 'gpu-next',
-              'hwdec': 'auto',
-              'media-controls': 'no',
-            }
-          });
-          console.log('MPV initialization completed successfully!');
-        } catch (error) {
-          console.error('MPV initialization failed:', error);
-          setState(prev => ({ ...prev, connection: 'error' }));
-        }
-      })();
-    };
+    (async () => {
+      try {
+        console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
+        await initializeMpv({
+          observedProperties: OBSERVED_PROPERTIES,
+          mpvConfig: {
+            'vo': 'gpu-next',
+            'hwdec': 'auto',
+            'media-controls': 'no',
+          }
+        });
+        console.log('MPV initialization completed successfully!');
+      } catch (error) {
+        console.error('MPV initialization failed:', error);
+        setState(prev => ({ ...prev, connection: 'error' }));
+      }
+    })();
   }, [])
+
+  useEffect(() => {
+    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroyMpv();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   useEffect(() => {
     let unlistenPromise = observeMpvProperties(

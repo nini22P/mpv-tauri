@@ -38,6 +38,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("mpv")
         .invoke_handler(tauri::generate_handler![
             commands::initialize_mpv,
+            commands::destroy_mpv,
             commands::send_mpv_command,
             commands::set_video_margin_ratio,
         ])

@@ -20,10 +20,11 @@ export * from './types';
  * 
  * @example
  * ```typescript
- * import { initializeMpv } from 'tauri-plugin-mpv-api';
+ * import { destroyMpv, initializeMpv } from 'tauri-plugin-mpv-api';
  * 
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
  * 
+ * // Initialize MPV
  * try {
  *   await initializeMpv({
  *     observedProperties: OBSERVED_PROPERTIES,
@@ -36,6 +37,9 @@ export * from './types';
  * } catch (error) {
  *   console.error('Failed to initialize MPV:', error);
  * }
+ * 
+ * // Destroy MPV when no longer needed
+ * await destroyMpv();
  * ```
  *
  * @param {object} [options={}] - Initialization options.
@@ -68,8 +72,31 @@ export async function initializeMpv(
 
   return await invoke<string>('plugin:mpv|initialize_mpv', {
     observedProperties,
-    windowLabel: windowLabel,
-    mpvConfig: mpvConfig,
+    windowLabel,
+    mpvConfig,
+  });
+}
+
+/**
+ * Destroy MPV player.
+ * 
+ * @example
+ * ```typescript
+ * import { destroyMpv } from 'tauri-plugin-mpv-api';
+ * 
+ * await destroyMpv();
+ * ```
+ *
+ * @param {string} [windowLabel] - Target window label, defaults to current window
+ * @returns {Promise<void>} A promise that resolves when the operation completes.
+ */
+export async function destroyMpv(windowLabel?: string): Promise<void> {
+  if (!windowLabel) {
+    windowLabel = getCurrentWindow().label;
+  }
+
+  return await invoke('plugin:mpv|destroy_mpv', {
+    windowLabel,
   });
 }
 

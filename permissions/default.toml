@@ -2,6 +2,7 @@
 description = "Default permissions for the plugin"
 permissions = [
   "allow-initialize-mpv",
+  "allow-destroy-mpv",
   "allow-send-mpv-command",
   "allow-set-video-margin-ratio",
 ]
