@@ -10,7 +10,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
     _api: PluginApi<R, C>,
 ) -> crate::Result<Mpv<R>> {
-    println!("🎬 MPV Plugin: Plugin registered successfully. Call initialize_mpv() from frontend when ready.");
+    println!("Tauri Plugin MPV: Plugin registered successfully. Call initializeMpv() from frontend when ready.");
     let mpv = Mpv(app.clone());
     Ok(mpv)
 }
@@ -24,34 +24,44 @@ impl<R: Runtime> Mpv<R> {
         window_label: Option<String>,
         mpv_config: Option<HashMap<String, Value>>,
     ) -> crate::Result<String> {
-        println!("🎬 MPV Plugin: Starting MPV initialization from frontend...");
+        println!("Tauri Plugin MPV: Starting MPV initialization from frontend...");
 
         let target_window = window_label.as_deref().unwrap_or("main").to_string();
 
         let properties = observed_properties.unwrap_or_default();
 
-        println!("🎬 MPV Plugin: Will observe properties: {:?}", properties);
+        println!(
+            "Tauri Plugin MPV: Will observe properties: {:?}",
+            properties
+        );
 
         let app_handle = self.0.clone();
 
-        println!("🎬 MPV Plugin: Looking for window '{}'...", target_window);
+        println!(
+            "Tauri Plugin MPV: Looking for window '{}'...",
+            target_window
+        );
         if let Some(webview_window) = app_handle.get_webview_window(&target_window) {
             println!(
-                "🎬 MPV Plugin: Found window '{}', getting handle...",
+                "Tauri Plugin MPV: Found window '{}', getting handle...",
                 target_window
             );
             let handle_result = webview_window.window_handle();
 
             match handle_result {
                 Ok(handle_wrapper) => {
-                    println!("🎬 MPV Plugin: Got window handle wrapper, extracting raw handle...");
+                    println!(
+                        "Tauri Plugin MPV: Got window handle wrapper, extracting raw handle..."
+                    );
                     let raw_handle = handle_wrapper.as_raw();
                     let window_handle = match raw_handle {
                         RawWindowHandle::Win32(handle) => handle.hwnd.get() as i64,
                         RawWindowHandle::Xlib(handle) => handle.window as i64,
                         RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
                         _ => {
-                            eprintln!("Unsupported window handle type for mpv --wid");
+                            eprintln!(
+                                "Tauri Plugin MPV: Unsupported window handle type for mpv --wid"
+                            );
                             return Err(crate::Error::UnsupportedPlatform);
                         }
                     };
@@ -76,19 +86,19 @@ impl<R: Runtime> Mpv<R> {
                     });
                 }
                 Err(e) => {
-                    eprintln!("🎬 MPV Plugin: Failed to get raw window handle: {:?}", e);
+                    eprintln!("Tauri Plugin MPV: Failed to get raw window handle: {:?}", e);
                     return Err(crate::Error::WindowHandleError);
                 }
             }
         } else {
             eprintln!(
-                "🎬 MPV Plugin: Window '{}' not found! Make sure your window exists with this label",
+                "Tauri Plugin MPV: Window '{}' not found! Make sure your window exists with this label",
                 target_window
             );
             return Err(crate::Error::WindowHandleError);
         }
 
-        println!("🎬 MPV Plugin: MPV initialization completed successfully!");
+        println!("Tauri Plugin MPV: MPV initialization completed successfully!");
         Ok(target_window)
     }
 
@@ -96,7 +106,7 @@ impl<R: Runtime> Mpv<R> {
         &self,
         command_json: &str,
         window_label: &str,
-    ) -> crate::Result<String> {
+    ) -> crate::Result<MpvCommandResponse> {
         ipc::send_command(command_json, window_label)
     }
 
@@ -105,8 +115,6 @@ impl<R: Runtime> Mpv<R> {
         ratio: VideoMarginRatio,
         window_label: &str,
     ) -> crate::Result<()> {
-        println!("Received video_margin_ratio: {:?}", ratio);
-
         if let Some(left) = ratio.left {
             let command = format!(
                 r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
