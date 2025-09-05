@@ -13,7 +13,7 @@ use crate::{ipc::get_ipc_pipe, MpvEvent};
 
 pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
-    properties: Vec<String>,
+    observed_properties: Vec<String>,
     window_label: String,
 ) {
     let ipc_pipe = get_ipc_pipe(&window_label);
@@ -25,8 +25,8 @@ pub fn start_event_listener<R: Runtime>(
         retry_count += 1;
 
         println!(
-            "[Tauri Plugin MPV] Event listener connecting... (attempt {}/{})",
-            retry_count, max_retries
+            "[Tauri Plugin MPV][{}] Event listener connecting... (attempt {}/{})",
+            window_label, retry_count, max_retries,
         );
 
         std::thread::sleep(Duration::from_secs(1));
@@ -39,11 +39,17 @@ pub fn start_event_listener<R: Runtime>(
 
         match stream_result {
             Ok(mut stream) => {
-                println!("[Tauri Plugin MPV] Event listener connected successfully.");
+                println!(
+                    "[Tauri Plugin MPV][{}] Event listener connected successfully.",
+                    window_label,
+                );
 
                 retry_count = 0;
 
-                for (id, property) in properties.iter().enumerate() {
+                let mut successful_properties = Vec::new();
+                let mut failed_properties = Vec::new();
+
+                for (id, property) in observed_properties.iter().enumerate() {
                     let cmd_str = format!(
                         r#"{{"command": ["observe_property", {}, "{}"]}}"#,
                         id + 1,
@@ -57,16 +63,32 @@ pub fn start_event_listener<R: Runtime>(
 
                     match write_result {
                         Ok(_) => {
-                            // println!("[Tauri Plugin MPV] Successfully observed property: {}", property);
+                            successful_properties.push(property.clone());
                         }
                         Err(e) => {
                             eprintln!(
-                                "[Tauri Plugin MPV] Failed to observe property '{}': {}",
-                                property, e
+                                "[Tauri Plugin MPV][{}] Failed to observe property '{}': {}",
+                                window_label, property, e,
                             );
+                            failed_properties.push(property.clone());
                             break;
                         }
                     }
+                }
+
+                if !successful_properties.is_empty() {
+                    println!(
+                        "[Tauri Plugin MPV][{}] - Successfully observed properties: [\"{}\"]",
+                        window_label,
+                        successful_properties.join("\", \""),
+                    );
+                }
+                if !failed_properties.is_empty() {
+                    eprintln!(
+                        "[Tauri Plugin MPV][{}] - Failed to observe properties: [\"{}\"]",
+                        window_label,
+                        failed_properties.join("\", \""),
+                    );
                 }
 
                 let reader = BufReader::new(stream);
@@ -81,41 +103,52 @@ pub fn start_event_listener<R: Runtime>(
                                         app_handle.emit_to(&window_label, &event_name, &payload)
                                     {
                                         eprintln!(
-                                            "[Tauri Plugin MPV] Failed to emit MPV event to window '{}': {}",
+                                            "[Tauri Plugin MPV][{}] Failed to emit MPV event: {}",
                                             window_label, e
                                         );
                                     }
                                 }
                             } else {
                                 eprintln!(
-                                    "[Tauri Plugin MPV] Failed to parse MPV event line as JSON: {}",
-                                    line
+                                    "[Tauri Plugin MPV][{}] Failed to parse MPV event line as JSON: {}",
+                                    window_label,
+                                    line,
                                 );
                             }
                         }
                         Err(e) => {
-                            eprintln!("[Tauri Plugin MPV] Error reading from MPV IPC: {}", e);
+                            eprintln!(
+                                "[Tauri Plugin MPV][{}] Error reading from MPV IPC: {}",
+                                window_label, e,
+                            );
                             break;
                         }
                     }
                 }
                 println!(
-                    "[Tauri Plugin MPV] MPV event listener disconnected for window '{}'.",
-                    window_label
+                    "[Tauri Plugin MPV][{}] MPV event listener disconnected.",
+                    window_label,
                 );
             }
             Err(e) => {
                 eprintln!(
-                    "[Tauri Plugin MPV] Failed to connect to mpv IPC for event listening at '{}' (attempt {}/{}): {}",
-                    ipc_pipe, retry_count, max_retries, e
+                    "[Tauri Plugin MPV][{}] Failed to connect to mpv IPC for event listening at '{}' (attempt {}/{}): {}",
+                    window_label,
+                    ipc_pipe,
+                    retry_count,
+                    max_retries,
+                    e,
                 );
 
                 if retry_count >= max_retries {
-                    eprintln!("[Tauri Plugin MPV] Max retries reached. MPV IPC connection failed.");
+                    eprintln!(
+                        "[Tauri Plugin MPV][{}] Max retries reached. MPV IPC connection failed.",
+                        window_label
+                    );
                     break;
                 }
 
-                println!("[Tauri Plugin MPV] Retrying...");
+                println!("[Tauri Plugin MPV][{}] Retrying...", window_label);
                 std::thread::sleep(Duration::from_secs(1));
             }
         }

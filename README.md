@@ -71,6 +71,9 @@ try {
   console.error('MPV initialization failed:', error);
 }
 
+// Destroy MPV when no longer needed
+// await destroyMpv();
+
 // Observe properties
 const unlisten = await observeMpvProperties(
   OBSERVED_PROPERTIES,
