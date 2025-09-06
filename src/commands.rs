@@ -21,19 +21,27 @@ pub(crate) async fn initialize_mpv<R: Runtime>(
 #[command]
 pub(crate) async fn send_mpv_command<R: Runtime>(
     app: AppHandle<R>,
-    command_json: &str,
-    window_label: &str,
+    command_json: String,
+    window_label: String,
 ) -> Result<MpvCommandResponse> {
-    app.mpv().send_mpv_command(command_json, window_label)
+    tauri::async_runtime::spawn_blocking(move || {
+        app.mpv().send_mpv_command(&command_json, &window_label)
+    })
+    .await
+    .unwrap()
 }
 
 #[command]
 pub(crate) async fn set_video_margin_ratio<R: Runtime>(
     app: AppHandle<R>,
     ratio: VideoMarginRatio,
-    window_label: &str,
+    window_label: String,
 ) -> Result<()> {
-    app.mpv().set_video_margin_ratio(ratio, window_label)
+    tauri::async_runtime::spawn_blocking(move || {
+        app.mpv().set_video_margin_ratio(ratio, &window_label)
+    })
+    .await
+    .unwrap()
 }
 
 #[command]

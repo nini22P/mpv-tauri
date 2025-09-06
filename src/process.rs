@@ -101,8 +101,8 @@ pub fn init_mpv_process<R: Runtime>(
 
     match Command::new("mpv")
         .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
     {
         Ok(child) => {
