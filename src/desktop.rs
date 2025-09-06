@@ -1,20 +1,18 @@
+use log::{error, info, warn};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::collections::HashMap;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::{
-    ipc::{self},
-    models::*,
-    process,
-};
+use crate::Result;
+use crate::{ipc, models::*, process};
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
     _api: PluginApi<R, C>,
 ) -> crate::Result<Mpv<R>> {
-    println!("[Tauri Plugin MPV] Plugin registered.");
+    info!("Plugin registered.");
     let mpv = Mpv(app.clone());
     Ok(mpv)
 }
@@ -27,7 +25,7 @@ impl<R: Runtime> Mpv<R> {
         observed_properties: Vec<String>,
         mpv_config: HashMap<String, Value>,
         window_label: &str,
-    ) -> crate::Result<String> {
+    ) -> Result<String> {
         let app_handle = self.0.clone();
 
         if let Some(webview_window) = app_handle.get_webview_window(&window_label) {
@@ -41,8 +39,8 @@ impl<R: Runtime> Mpv<R> {
                         RawWindowHandle::Xlib(handle) => handle.window as i64,
                         RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
                         _ => {
-                            eprintln!(
-                                "[Tauri Plugin MPV][{}] Unsupported window handle type.",
+                            error!(
+                                "Unsupported window handle type for window '{}'.",
                                 window_label
                             );
                             return Err(crate::Error::UnsupportedPlatform);
@@ -58,18 +56,17 @@ impl<R: Runtime> Mpv<R> {
                     )?;
                 }
                 Err(e) => {
-                    eprintln!(
-                        "[Tauri Plugin MPV]{} Failed to get raw window handle: {:?}",
-                        window_label, e,
+                    error!(
+                        "Failed to get raw window handle for window '{}': {:?}",
+                        window_label, e
                     );
                     return Err(crate::Error::WindowHandleError);
                 }
             }
         } else {
-            eprintln!(
-                "[Tauri Plugin MPV][{}] Window with label '{}' not found! Make sure your window exists",
-                window_label,
-                window_label,
+            warn!(
+                "Window with label '{}' not found. Please ensure the window exists.",
+                window_label
             );
             return Err(crate::Error::WindowHandleError);
         }
@@ -81,7 +78,7 @@ impl<R: Runtime> Mpv<R> {
         &self,
         command_json: &str,
         window_label: &str,
-    ) -> crate::Result<MpvCommandResponse> {
+    ) -> Result<MpvCommandResponse> {
         ipc::send_command(command_json, window_label)
     }
 
@@ -89,7 +86,7 @@ impl<R: Runtime> Mpv<R> {
         &self,
         ratio: VideoMarginRatio,
         window_label: &str,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         if let Some(left) = ratio.left {
             let command = format!(
                 r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
@@ -125,7 +122,7 @@ impl<R: Runtime> Mpv<R> {
         Ok(())
     }
 
-    pub fn destroy_mpv(&self, window_label: &str) -> crate::Result<()> {
+    pub fn destroy_mpv(&self, window_label: &str) -> Result<()> {
         process::kill_mpv_process(window_label)
     }
 }

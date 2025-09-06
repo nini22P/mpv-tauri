@@ -1,3 +1,4 @@
+use log::{debug, error, info, warn};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};
@@ -22,44 +23,36 @@ pub fn init_mpv_process<R: Runtime>(
     if let Some(child) = processes.get_mut(window_label) {
         match child.try_wait() {
             Ok(Some(_status)) => {
-                println!(
-                    "[Tauri Plugin MPV][{}] Stale MPV process found and removed. Re-initializing...",
-                    window_label,
+                warn!(
+                    "Stale MPV process for window '{}' found and removed. Re-initializing...",
+                    window_label
                 );
                 processes.remove(window_label);
             }
             Ok(None) => {
-                println!(
-                    "[Tauri Plugin MPV][{}] MPV process is still running. Skipping initialization.",
-                    window_label,
+                info!(
+                    "MPV process for window '{}' is still running. Skipping initialization.",
+                    window_label
                 );
                 return Ok(());
             }
             Err(e) => {
-                let error_message =
-                    format!("Failed to check status of existing MPV process: {}", e);
-                eprintln!("[Tauri Plugin MPV][{}] {}", window_label, error_message);
+                let error_message = format!(
+                    "Failed to check status of existing MPV process for window '{}': {}",
+                    window_label, e
+                );
+                error!("{}", error_message);
                 return Err(crate::Error::MpvProcessError(error_message));
             }
         }
     }
 
-    println!(
-        "[Tauri Plugin MPV][{}] Initializing MPV for window '{}'...",
-        window_label, window_label,
-    );
+    info!("Initializing MPV for window '{}'...", window_label);
 
     let ipc_pipe = get_ipc_pipe(&window_label);
 
-    println!(
-        "[Tauri Plugin MPV][{}] - Using IPC pipe: {}",
-        window_label, ipc_pipe,
-    );
-
-    println!(
-        "[Tauri Plugin MPV][{}] - Starting MPV process with WID: {}",
-        window_label, window_handle,
-    );
+    debug!("Using IPC pipe: {}", ipc_pipe);
+    debug!("Starting MPV process with WID: {}", window_handle);
 
     // Default MPV arguments
     let mut args = vec![
@@ -81,8 +74,8 @@ pub fn init_mpv_process<R: Runtime>(
             Value::Bool(true) => format!("--{}", key),
             Value::Bool(false) => format!("--no-{}", key),
             _ => {
-                println!(
-                    "[Tauri Plugin MPV][{}] Unsupported config value type for key: {}",
+                warn!(
+                    "For window '{}', unsupported config value type for key: '{}'. The setting will be ignored.",
                     window_label, key,
                 );
                 continue;
@@ -91,10 +84,10 @@ pub fn init_mpv_process<R: Runtime>(
         args.push(arg);
     }
 
-    println!(
-        "[Tauri Plugin MPV][{}] mpv {}",
+    debug!(
+        "Spawning MPV process for window '{}' with args: mpv {}",
         window_label,
-        &args.join(" "),
+        args.join(" ")
     );
 
     let args_clone = args.clone();
@@ -106,10 +99,10 @@ pub fn init_mpv_process<R: Runtime>(
         .spawn()
     {
         Ok(child) => {
-            println!(
-                "[Tauri Plugin MPV][{}] MPV process started (PID: {}). Initialization complete",
+            info!(
+                "MPV process started for window '{}' (PID: {}). Initialization complete.",
                 window_label,
-                child.id(),
+                child.id()
             );
             processes.insert(window_label.to_string(), child);
 
@@ -123,17 +116,16 @@ pub fn init_mpv_process<R: Runtime>(
         }
         Err(e) => {
             let error_message = format!(
-                "[Tauri Plugin MPV][{}] Failed to start MPV: {}. Is mpv installed and in your PATH?",
-                window_label,
-                e,
+                "Failed to start MPV: {}. Is mpv installed and in your PATH?",
+                e
             );
-            eprintln!("{}", error_message);
-            eprintln!(
-                "[Tauri Plugin MPV][{}] mpv {}",
+            error!("For window '{}': {}", window_label, error_message);
+            debug!(
+                "The command that failed for window '{}' was: mpv {}",
                 window_label,
                 args_clone.join(" ")
             );
-            Err(crate::Error::MpvProcessError(error_message))
+            return Err(crate::Error::MpvProcessError(error_message));
         }
     }
 }
@@ -144,31 +136,33 @@ pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
     let mut processes = MPV_PROCESSES.lock().unwrap();
 
     if let Some(mut child) = processes.remove(window_label) {
-        println!(
-            "[Tauri Plugin MPV][{}] Attempting to kill MPV process for window '{}' (PID: {})...",
+        info!(
+            "Attempting to kill MPV process for window '{}' (PID: {})...",
             window_label,
-            window_label,
-            child.id(),
+            child.id()
         );
         match child.kill() {
             Ok(_) => {
                 let _ = child.wait();
-                println!(
-                    "[Tauri Plugin MPV][{}] MPV process for window '{}' killed successfully.",
-                    window_label, window_label,
+                info!(
+                    "MPV process for window '{}' killed successfully.",
+                    window_label
                 );
                 Ok(())
             }
-            Err(e) => Err(crate::Error::MpvProcessError(format!(
-                "[Tauri Plugin MPV][{}] Failed to kill MPV process for window '{}': {}",
-                window_label, window_label, e,
-            ))),
+            Err(e) => {
+                let error_message = format!(
+                    "Failed to kill MPV process for window '{}': {}",
+                    window_label, e
+                );
+                error!("{}", error_message);
+                return Err(crate::Error::MpvProcessError(error_message));
+            }
         }
     } else {
-        println!(
-            "[Tauri Plugin MPV][{}] No MPV process found for window '{}' to kill. It might have been already cleaned up.",
-            window_label,
-            window_label,
+        info!(
+            "No MPV process found for window '{}' to kill. It might have already been cleaned up.",
+            window_label
         );
         Ok(())
     }
