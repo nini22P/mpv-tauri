@@ -38,7 +38,7 @@ export interface MpvCommand {
 }
 
 export interface MpvCommandResponse {
-  data: unknown | null;
+  data?: unknown;
   error: 'success' | string;
   request_id: number;
 }

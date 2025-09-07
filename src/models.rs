@@ -10,8 +10,16 @@ pub struct MpvConfig {
     pub observed_properties: Option<Vec<String>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct MpvCommand {
+    pub command: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<u32>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MpvCommandResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
     pub error: String,
     pub request_id: u32,
@@ -21,17 +29,15 @@ pub struct MpvCommandResponse {
 pub struct MpvEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event: Option<String>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
-
     #[serde(flatten)]
     pub other: HashMap<String, Value>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VideoMarginRatio {
     pub left: Option<f64>,
     pub right: Option<f64>,

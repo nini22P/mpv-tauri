@@ -63,10 +63,10 @@ impl<R: Runtime> Mpv<R> {
 
     pub fn send_mpv_command(
         &self,
-        command_json: &str,
+        mpv_command: &MpvCommand,
         window_label: &str,
     ) -> Result<MpvCommandResponse> {
-        ipc::send_command(command_json, window_label)
+        ipc::send_command(mpv_command, window_label)
     }
 
     pub fn set_video_margin_ratio(
@@ -75,35 +75,51 @@ impl<R: Runtime> Mpv<R> {
         window_label: &str,
     ) -> Result<()> {
         if let Some(left) = ratio.left {
-            let command = format!(
-                r#"{{"command": ["set_property", "video-margin-ratio-left", {}]}}"#,
-                left
-            );
-            ipc::send_command(&command, window_label)?;
+            let mpv_command = MpvCommand {
+                command: vec![
+                    "set_property".into(),
+                    "video-margin-ratio-left".into(),
+                    left.into(),
+                ],
+                request_id: None,
+            };
+            ipc::send_command(&mpv_command, window_label)?;
         }
 
         if let Some(right) = ratio.right {
-            let command = format!(
-                r#"{{"command": ["set_property", "video-margin-ratio-right", {}]}}"#,
-                right
-            );
-            ipc::send_command(&command, window_label)?;
+            let mpv_command = MpvCommand {
+                command: vec![
+                    "set_property".into(),
+                    "video-margin-ratio-right".into(),
+                    right.into(),
+                ],
+                request_id: None,
+            };
+            ipc::send_command(&mpv_command, window_label)?;
         }
 
         if let Some(top) = ratio.top {
-            let command = format!(
-                r#"{{"command": ["set_property", "video-margin-ratio-top", {}]}}"#,
-                top
-            );
-            ipc::send_command(&command, window_label)?;
+            let mpv_command = MpvCommand {
+                command: vec![
+                    "set_property".into(),
+                    "video-margin-ratio-top".into(),
+                    top.into(),
+                ],
+                request_id: None,
+            };
+            ipc::send_command(&mpv_command, window_label)?;
         }
 
         if let Some(bottom) = ratio.bottom {
-            let command = format!(
-                r#"{{"command": ["set_property", "video-margin-ratio-bottom", {}]}}"#,
-                bottom
-            );
-            ipc::send_command(&command, window_label)?;
+            let mpv_command = MpvCommand {
+                command: vec![
+                    "set_property".into(),
+                    "video-margin-ratio-bottom".into(),
+                    bottom.into(),
+                ],
+                request_id: None,
+            };
+            ipc::send_command(&mpv_command, window_label)?;
         }
 
         Ok(())
