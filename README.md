@@ -65,7 +65,6 @@ const mpvConfig: MpvConfig = {
   ],
   observedProperties: OBSERVED_PROPERTIES,
   ipcTimeoutMs: 2000,
-  showMpvOutput: false,
 };
 
 // Initialize MPV
