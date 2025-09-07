@@ -7,6 +7,7 @@ use std::os::unix::net::UnixStream;
 
 use log::{error, trace};
 
+use crate::MpvCommand;
 use crate::MpvCommandResponse;
 use crate::Result;
 
@@ -19,8 +20,12 @@ pub fn get_ipc_pipe(window_label: &str) -> String {
     format!("{}_{}_{}", IPC_PIPE_BASE, std::process::id(), window_label)
 }
 
-pub fn send_command(command_json: &str, window_label: &str) -> Result<MpvCommandResponse> {
-    trace!("-> SEND [{}] {}", window_label, command_json);
+pub fn send_command(mpv_command: &MpvCommand, window_label: &str) -> Result<MpvCommandResponse> {
+    trace!(
+        "-> SEND [{}] {}",
+        window_label,
+        serde_json::to_string(&mpv_command).unwrap_or_default()
+    );
 
     let ipc_pipe = get_ipc_pipe(&window_label);
 
@@ -34,7 +39,7 @@ pub fn send_command(command_json: &str, window_label: &str) -> Result<MpvCommand
                 return Err(crate::Error::IpcError(err_msg));
             }
         };
-        process_mpv_command(pipe, command_json, window_label)
+        process_mpv_command(pipe, mpv_command, window_label)
     }
 
     #[cfg(unix)]
@@ -53,10 +58,18 @@ pub fn send_command(command_json: &str, window_label: &str) -> Result<MpvCommand
 
 fn process_mpv_command<S: Read + Write>(
     mut stream: S,
-    command_json: &str,
+    mpv_command: &MpvCommand,
     window_label: &str,
 ) -> Result<MpvCommandResponse> {
-    if let Err(e) = stream.write_all(command_json.as_bytes()) {
+    let command_json = serde_json::to_string(&mpv_command);
+
+    if let Err(e) = command_json {
+        let err_msg = format!("Failed to serialize command to JSON: {}", e);
+        error!("For window '{}': {}", window_label, err_msg);
+        return Err(crate::Error::IpcError(err_msg));
+    }
+
+    if let Err(e) = stream.write_all(command_json.unwrap().as_bytes()) {
         let err_msg = format!("Failed to write command to IPC stream: {}", e);
         error!("For window '{}': {}", window_label, err_msg);
         return Err(crate::Error::IpcError(err_msg));
