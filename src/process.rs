@@ -62,16 +62,14 @@ pub fn init_mpv_process<R: Runtime>(
     );
 
     // Default MPV arguments
+    // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
         format!("--wid={}", window_handle),
         format!("--input-ipc-server={}", ipc_pipe),
-        "--idle=yes".to_string(),
+        "--profile=libmpv".to_string(),
         "--force-window".to_string(),
         "--keep-open=yes".to_string(),
-        "--no-border".to_string(),
-        "--input-default-bindings=no".to_string(),
-        "--input-vo-keyboard=no".to_string(),
-        "--no-osc".to_string(),
+        "--border=no".to_string(),
     ];
 
     args.extend(mpv_config.mpv_args.unwrap_or_default());
