@@ -23,6 +23,7 @@ lazy_static::lazy_static! {
 
 pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
+    ipc_timeout: Duration,
     observed_properties: Vec<String>,
     window_label: String,
 ) {
@@ -53,8 +54,6 @@ pub fn start_event_listener<R: Runtime>(
             "Event listener for window '{}' connecting... (attempt {}/{})",
             window_label, retry_count, max_retries
         );
-
-        std::thread::sleep(Duration::from_secs(1));
 
         #[cfg(windows)]
         let stream_result = OpenOptions::new().read(true).write(true).open(&ipc_pipe);
@@ -167,7 +166,7 @@ pub fn start_event_listener<R: Runtime>(
                 }
 
                 debug!("Retrying IPC connection for window '{}'...", window_label);
-                std::thread::sleep(Duration::from_secs(1));
+                std::thread::sleep(ipc_timeout);
             }
         }
 
