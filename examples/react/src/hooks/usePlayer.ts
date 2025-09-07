@@ -71,11 +71,8 @@ const usePlayer = (): Player => {
 
       const mpvConfig: MpvConfig = {
         mpvArgs: [
-          '--no-config',
           '--vo=gpu-next',
           '--hwdec=auto-safe',
-          '--media-controls=no',
-          '--quiet',
         ],
         observedProperties: OBSERVED_PROPERTIES,
         ipcTimeoutMs: 2000,

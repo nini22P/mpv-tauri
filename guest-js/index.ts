@@ -50,10 +50,8 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * // MPV configuration
  * const mpvConfig: MpvConfig = {
  *   mpvArgs: [
- *     '--no-config',
  *     '--vo=gpu-next',
  *     '--hwdec=auto-safe',
- *     '--media-controls=no',
  *   ],
  *   observedProperties: OBSERVED_PROPERTIES,
  * };
