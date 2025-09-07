@@ -8,6 +8,8 @@ pub struct MpvConfig {
     pub mpv_path: Option<String>,
     pub mpv_args: Option<Vec<String>>,
     pub observed_properties: Option<Vec<String>>,
+    pub ipc_timeout_ms: Option<u64>,
+    pub show_mpv_output: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

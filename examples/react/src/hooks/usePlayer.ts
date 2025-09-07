@@ -66,18 +66,22 @@ const usePlayer = (): Player => {
     percentPos: 0,
   });
 
-  const mpvConfig: MpvConfig = {
-    mpvArgs: [
-      '--no-config',
-      '--vo=gpu-next',
-      '--hwdec=auto-safe',
-      '--media-controls=no',
-    ],
-    observedProperties: OBSERVED_PROPERTIES,
-  };
-
   useEffect(() => {
     (async () => {
+
+      const mpvConfig: MpvConfig = {
+        mpvArgs: [
+          '--no-config',
+          '--vo=gpu-next',
+          '--hwdec=auto-safe',
+          '--media-controls=no',
+          '--quiet',
+        ],
+        observedProperties: OBSERVED_PROPERTIES,
+        ipcTimeoutMs: 2000,
+        showMpvOutput: true,
+      };
+
       try {
         console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
         await initializeMpv(mpvConfig);

@@ -10,6 +10,8 @@ const mpvConfig: MpvConfig = {
     '--media-controls=no',
   ],
   observedProperties: OBSERVED_PROPERTIES,
+  ipcTimeoutMs: 2000,
+  showMpvOutput: false,
 };
 
 try {

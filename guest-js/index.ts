@@ -33,6 +33,8 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
     '--media-controls=no',
   ],
   observedProperties: COMMON_PROPERTIES,
+  ipcTimeoutMs: 2000,
+  showMpvOutput: false,
 };
 
 /**
