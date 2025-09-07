@@ -1,8 +1,7 @@
-use serde_json::Value;
-use std::collections::HashMap;
 use tauri::{command, AppHandle, Runtime};
 
 use crate::MpvCommandResponse;
+use crate::MpvConfig;
 use crate::MpvExt;
 use crate::Result;
 use crate::VideoMarginRatio;
@@ -10,12 +9,10 @@ use crate::VideoMarginRatio;
 #[command]
 pub(crate) async fn initialize_mpv<R: Runtime>(
     app: AppHandle<R>,
-    observed_properties: Vec<String>,
-    mpv_config: HashMap<String, Value>,
+    mpv_config: MpvConfig,
     window_label: &str,
 ) -> Result<String> {
-    app.mpv()
-        .initialize_mpv(observed_properties, mpv_config, window_label)
+    app.mpv().initialize_mpv(mpv_config, window_label)
 }
 
 #[command]

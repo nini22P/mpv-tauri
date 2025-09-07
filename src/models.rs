@@ -3,6 +3,14 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MpvConfig {
+    pub mpv_path: Option<String>,
+    pub mpv_args: Option<Vec<String>>,
+    pub observed_properties: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MpvCommandResponse {
     pub data: Option<Value>,
     pub error: String,

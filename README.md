@@ -2,6 +2,8 @@
 
 A Tauri plugin that embeds MPV media player window into your Tauri applications.
 
+This plugin provides a simple and efficient way to embed MPV into your Tauri applications. It uses MPV's JSON IPC interface to communicate with the MPV process.
+
 ## Installation
 
 ### Prerequisites
@@ -50,23 +52,26 @@ body {
 ## Quick Start
 
 ```typescript
-import { destroyMpv, initializeMpv, observeMpvProperties, sendMpvCommand } from "tauri-plugin-mpv-api";
-
+import { destroyMpv, initializeMpv, MpvConfig, observeMpvProperties, sendMpvCommand } from "tauri-plugin-mpv-api";
 
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
 
+// MPV configuration
+const mpvConfig: MpvConfig = {
+  mpvArgs: [
+    '--no-config',
+    '--vo=gpu-next',
+    '--hwdec=auto-safe',
+    '--media-controls=no',
+  ],
+  observedProperties: OBSERVED_PROPERTIES,
+};
+
 // Initialize MPV
 try {
   console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
-  await initializeMpv({
-    observedProperties: OBSERVED_PROPERTIES,
-    mpvConfig: {
-      'vo': 'gpu-next',
-      'hwdec': 'auto',
-      'media-controls': 'no',
-    }
-  });
+  await initializeMpv(mpvConfig);
   console.log('MPV initialization completed successfully!');
 } catch (error) {
   console.error('MPV initialization failed:', error);

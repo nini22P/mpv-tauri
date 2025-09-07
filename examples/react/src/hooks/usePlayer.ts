@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties } from 'tauri-plugin-mpv-api';
+import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties, MpvConfig } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = [
   'playlist',
@@ -66,18 +66,21 @@ const usePlayer = (): Player => {
     percentPos: 0,
   });
 
+  const mpvConfig: MpvConfig = {
+    mpvArgs: [
+      '--no-config',
+      '--vo=gpu-next',
+      '--hwdec=auto-safe',
+      '--media-controls=no',
+    ],
+    observedProperties: OBSERVED_PROPERTIES,
+  };
+
   useEffect(() => {
     (async () => {
       try {
         console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
-        await initializeMpv({
-          observedProperties: OBSERVED_PROPERTIES,
-          mpvConfig: {
-            'vo': 'gpu-next',
-            'hwdec': 'auto',
-            'media-controls': 'no',
-          }
-        });
+        await initializeMpv(mpvConfig);
         console.log('MPV initialization completed successfully!');
       } catch (error) {
         console.error('MPV initialization failed:', error);

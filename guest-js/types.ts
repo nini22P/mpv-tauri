@@ -1,3 +1,9 @@
+export interface MpvConfig {
+  mpvPath?: string;
+  mpvArgs?: string[];
+  observedProperties?: readonly string[];
+}
+
 /**
  * @see {@link https://mpv.io/manual/master/#command-interface-playlist}
  */
@@ -44,10 +50,6 @@ export interface VideoMarginRatio {
   bottom?: number;
 }
 
-export interface MpvConfig {
-  [key: string]: string | number | boolean;
-}
-
 /**
  * @see {@link https://mpv.io/manual/master/#list-of-events}
  */
@@ -92,15 +94,3 @@ export type MpvPropertyEventFor<K extends string> = {
   ? { name: P; data: MpvPropertyTypes[P] }
   : { name: P; data: unknown };
 }[K];
-
-export const COMMON_PROPERTIES = [
-  'playlist',      // Playlist
-  'filename',      // Current filename
-  'pause',         // Pause state
-  'eof-reached',   // End of file reached state
-  'time-pos',      // Playback position (seconds)
-  'duration',      // Total duration (seconds)
-  'volume',        // Volume (0-100)
-  'mute',          // Mute state
-  'speed',         // Playback speed
-] as const;

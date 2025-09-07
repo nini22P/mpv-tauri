@@ -11,29 +11,54 @@ import type {
   MpvPropertyEventFor,
 } from './types';
 
-import { COMMON_PROPERTIES } from './types';
-
 export * from './types';
+
+export const COMMON_PROPERTIES = [
+  'playlist',      // Playlist
+  'filename',      // Current filename
+  'pause',         // Pause state
+  'eof-reached',   // End of file reached state
+  'time-pos',      // Playback position (seconds)
+  'duration',      // Total duration (seconds)
+  'volume',        // Volume (0-100)
+  'mute',          // Mute state
+  'speed',         // Playback speed
+] as const;
+
+export const DEFAULT_MPV_CONFIG: MpvConfig = {
+  mpvArgs: [
+    '--no-config',
+    '--vo=gpu-next',
+    '--hwdec=auto-safe',
+    '--media-controls=no',
+  ],
+  observedProperties: COMMON_PROPERTIES,
+};
 
 /**
  * Initialize MPV player.
  * 
  * @example
  * ```typescript
- * import { destroyMpv, initializeMpv } from 'tauri-plugin-mpv-api';
+ * import { destroyMpv, initializeMpv, MpvConfig } from 'tauri-plugin-mpv-api';
  * 
+ * // Properties to observe
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
+ * 
+ * // MPV configuration
+ * const mpvConfig: MpvConfig = {
+ *   mpvArgs: [
+ *     '--no-config',
+ *     '--vo=gpu-next',
+ *     '--hwdec=auto-safe',
+ *     '--media-controls=no',
+ *   ],
+ *   observedProperties: OBSERVED_PROPERTIES,
+ * };
  * 
  * // Initialize MPV
  * try {
- *   await initializeMpv({
- *     observedProperties: OBSERVED_PROPERTIES,
- *     mpvConfig: {
- *       'vo': 'gpu-next',
- *       'hwdec': 'auto',
- *       'media-controls': 'no',
- *     }
- *   });
+ *   await initializeMpv(mpvConfig);
  * } catch (error) {
  *   console.error('Failed to initialize MPV:', error);
  * }
@@ -42,36 +67,25 @@ export * from './types';
  * await destroyMpv();
  * ```
  *
- * @param {object} [options={}] - Initialization options.
- * @param {readonly string[]} [options.observedProperties] - A list of MPV properties to observe. Defaults to a common set of properties.
- * @param {MpvConfig} [options.mpvConfig] - A map of MPV configuration options to apply on startup.
- * @param {string} [options.windowLabel] - The label of the target window. Defaults to the current window's label.
+ * @param {MpvConfig} [mpvConfig] - Initialization options.
+ * @param {string} [windowLabel] - The label of the target window. Defaults to the current window's label.
  * @returns {Promise<string>} A promise that resolves with the actual window label used for initialization.
  *
  * @throws {Error} Throws an error if MPV initialization fails (e.g., mpv executable not in PATH).
  */
 export async function initializeMpv(
-  {
-    observedProperties,
-    mpvConfig,
-    windowLabel,
-  }: {
-    observedProperties?: readonly string[],
-    mpvConfig?: MpvConfig,
-    windowLabel?: string,
-  } = {}
+  mpvConfig?: MpvConfig,
+  windowLabel?: string,
 ): Promise<string> {
 
-  if (!observedProperties) {
-    observedProperties = COMMON_PROPERTIES;
-  }
+  mpvConfig = {
+    ...DEFAULT_MPV_CONFIG,
+    ...mpvConfig,
+  };
 
-  if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
-  }
+  windowLabel = windowLabel ?? getCurrentWindow().label;
 
   return await invoke<string>('plugin:mpv|initialize_mpv', {
-    observedProperties,
     mpvConfig,
     windowLabel,
   });
