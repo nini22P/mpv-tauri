@@ -1,5 +1,6 @@
 use tauri::{command, AppHandle, Runtime};
 
+use crate::MpvCommand;
 use crate::MpvCommandResponse;
 use crate::MpvConfig;
 use crate::MpvExt;
@@ -18,11 +19,11 @@ pub(crate) async fn initialize_mpv<R: Runtime>(
 #[command]
 pub(crate) async fn send_mpv_command<R: Runtime>(
     app: AppHandle<R>,
-    command_json: String,
+    mpv_command: MpvCommand,
     window_label: String,
 ) -> Result<MpvCommandResponse> {
     tauri::async_runtime::spawn_blocking(move || {
-        app.mpv().send_mpv_command(&command_json, &window_label)
+        app.mpv().send_mpv_command(&mpv_command, &window_label)
     })
     .await
     .unwrap()

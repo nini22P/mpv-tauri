@@ -316,18 +316,16 @@ export async function listenMpvEvents(
  * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
  */
 export async function sendMpvCommand(
-  command: MpvCommand,
+  mpvCommand: MpvCommand,
   windowLabel?: string
 ): Promise<MpvCommandResponse> {
-
-  const commandJson = JSON.stringify(command);
 
   if (!windowLabel) {
     windowLabel = getCurrentWindow().label;
   }
 
   return await invoke<MpvCommandResponse>('plugin:mpv|send_mpv_command', {
-    commandJson,
+    mpvCommand,
     windowLabel,
   });
 }
