@@ -1,5 +1,4 @@
 use log::{debug, error, info, warn};
-use serde_json::Value;
 use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -7,6 +6,7 @@ use tauri::{AppHandle, Runtime};
 
 use crate::events::{self, stop_event_listener};
 use crate::ipc::get_ipc_pipe;
+use crate::MpvConfig;
 
 lazy_static::lazy_static! {
    pub static ref MPV_PROCESSES: Mutex<HashMap<String, Child>> = Mutex::new(HashMap::new());
@@ -15,8 +15,7 @@ lazy_static::lazy_static! {
 pub fn init_mpv_process<R: Runtime>(
     app_handle: AppHandle<R>,
     window_handle: i64,
-    mpv_config: HashMap<String, Value>,
-    observed_properties: Vec<String>,
+    mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
     let mut processes = MPV_PROCESSES.lock().unwrap();
@@ -52,7 +51,10 @@ pub fn init_mpv_process<R: Runtime>(
     let ipc_pipe = get_ipc_pipe(&window_label);
 
     debug!("Using IPC pipe: {}", ipc_pipe);
-    debug!("Starting MPV process with WID: {}", window_handle);
+    debug!(
+        "Starting MPV process for window '{}' (WID: {})",
+        window_label, window_handle
+    );
 
     // Default MPV arguments
     let mut args = vec![
@@ -67,32 +69,20 @@ pub fn init_mpv_process<R: Runtime>(
         "--no-osc".to_string(),
     ];
 
-    for (key, value) in mpv_config {
-        let arg = match value {
-            Value::String(s) => format!("--{}={}", key, s),
-            Value::Number(n) => format!("--{}={}", key, n),
-            Value::Bool(true) => format!("--{}", key),
-            Value::Bool(false) => format!("--no-{}", key),
-            _ => {
-                warn!(
-                    "For window '{}', unsupported config value type for key: '{}'. The setting will be ignored.",
-                    window_label, key,
-                );
-                continue;
-            }
-        };
-        args.push(arg);
-    }
+    args.extend(mpv_config.mpv_args.unwrap_or_default());
+
+    let mpv_path = mpv_config.mpv_path.unwrap_or_else(|| "mpv".to_string());
 
     debug!(
-        "Spawning MPV process for window '{}' with args: mpv {}",
+        "Spawning MPV process for window '{}' with args: {} {}",
         window_label,
+        mpv_path,
         args.join(" ")
     );
 
     let args_clone = args.clone();
 
-    match Command::new("mpv")
+    match Command::new(mpv_path.clone())
         .args(args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -100,16 +90,20 @@ pub fn init_mpv_process<R: Runtime>(
     {
         Ok(child) => {
             info!(
-                "MPV process started for window '{}' (PID: {}). Initialization complete.",
+                "MPV process (PID: {}) started for window '{}'. Initialization complete.",
+                child.id(),
                 window_label,
-                child.id()
             );
             processes.insert(window_label.to_string(), child);
 
             let window_label_clone = window_label.to_string();
 
             std::thread::spawn(move || {
-                events::start_event_listener(app_handle, observed_properties, window_label_clone);
+                events::start_event_listener(
+                    app_handle,
+                    mpv_config.observed_properties.unwrap_or_default(),
+                    window_label_clone,
+                );
             });
 
             Ok(())
@@ -121,8 +115,9 @@ pub fn init_mpv_process<R: Runtime>(
             );
             error!("For window '{}': {}", window_label, error_message);
             debug!(
-                "The command that failed for window '{}' was: mpv {}",
+                "The command that failed for window '{}' was: {} {}",
                 window_label,
+                mpv_path,
                 args_clone.join(" ")
             );
             return Err(crate::Error::MpvProcessError(error_message));

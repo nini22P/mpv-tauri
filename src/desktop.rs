@@ -1,8 +1,6 @@
 use log::{error, info, warn};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
-use serde_json::Value;
-use std::collections::HashMap;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
 use crate::Result;
@@ -20,12 +18,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mpv<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> Mpv<R> {
-    pub fn initialize_mpv(
-        &self,
-        observed_properties: Vec<String>,
-        mpv_config: HashMap<String, Value>,
-        window_label: &str,
-    ) -> Result<String> {
+    pub fn initialize_mpv(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app_handle = self.0.clone();
 
         if let Some(webview_window) = app_handle.get_webview_window(&window_label) {
@@ -47,13 +40,7 @@ impl<R: Runtime> Mpv<R> {
                         }
                     };
 
-                    process::init_mpv_process(
-                        app_handle,
-                        window_handle,
-                        mpv_config,
-                        observed_properties,
-                        window_label,
-                    )?;
+                    process::init_mpv_process(app_handle, window_handle, mpv_config, window_label)?;
                 }
                 Err(e) => {
                     error!(
