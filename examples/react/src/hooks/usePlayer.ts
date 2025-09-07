@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties, MpvConfig } from 'tauri-plugin-mpv-api';
+import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties, MpvConfig, listenMpvEvents } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = [
   'playlist',
@@ -49,6 +49,8 @@ export type Player = PlayerState & PlayerActions;
 
 const usePlayer = (): Player => {
 
+  const tolerance = 0.5
+
   const lastUpdateTime = useRef(0);
 
   const [state, setState] = useState<PlayerState>({
@@ -76,7 +78,6 @@ const usePlayer = (): Player => {
         ],
         observedProperties: OBSERVED_PROPERTIES,
         ipcTimeoutMs: 2000,
-        showMpvOutput: true,
       };
 
       try {
@@ -146,6 +147,7 @@ const usePlayer = (): Player => {
               newStatus.speed = data;
               break;
             default:
+              console.log(name, data);
               break;
           }
 
@@ -176,7 +178,7 @@ const usePlayer = (): Player => {
   };
 
   const play = async () => {
-    if (state.currentFile && (state.duration - state.timePos < 1 || state.eofReached)) {
+    if (state.currentFile && (state.duration - state.timePos < tolerance || state.eofReached)) {
       await seek(0);
     }
     await sendMpvCommand({ command: ['set_property', 'pause', false] });
@@ -211,6 +213,7 @@ const usePlayer = (): Player => {
   return {
     ...state,
     isPaused: state.isPaused || !state.currentFile,
+    timePos: state.duration - state.timePos < tolerance ? state.duration : state.timePos,
     loadFile,
     playlistPlay,
     playlistNext,

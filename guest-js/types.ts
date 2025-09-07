@@ -32,6 +32,8 @@ export interface MpvPropertyTypes {
   'mute': boolean;
   'speed': number;
   'percent-pos'?: number;
+  'playback-time'?: number;
+  'playtime-remaining'?: number;
 }
 
 export interface MpvCommand {
