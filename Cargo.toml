@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-mpv"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["22"]
 description = "A Tauri plugin that embeds MPV media player window into your Tauri applications."
 edition = "2021"

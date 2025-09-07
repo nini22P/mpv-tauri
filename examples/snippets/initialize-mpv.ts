@@ -4,10 +4,8 @@ const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as con
 
 const mpvConfig: MpvConfig = {
   mpvArgs: [
-    '--no-config',
     '--vo=gpu-next',
     '--hwdec=auto-safe',
-    '--media-controls=no',
   ],
   observedProperties: OBSERVED_PROPERTIES,
   ipcTimeoutMs: 2000,
