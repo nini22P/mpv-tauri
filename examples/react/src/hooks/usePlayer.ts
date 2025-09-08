@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties, MpvConfig, listenMpvEvents } from 'tauri-plugin-mpv-api';
+import { initializeMpv, destroyMpv, sendMpvCommand, MpvPlaylistItem, observeMpvProperties, MpvConfig } from 'tauri-plugin-mpv-api';
 
 const OBSERVED_PROPERTIES = [
   'playlist',
