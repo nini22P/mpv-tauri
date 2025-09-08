@@ -98,7 +98,7 @@ fn process_mpv_command<S: Read + Write>(
         Ok(res) => res,
         Err(e) => {
             let err_msg = format!(
-                "Failed to parse MPV response JSON: {}. Original response: '{}'",
+                "Failed to parse mpv response JSON: {}. Original response: '{}'",
                 e,
                 response_string.trim_end()
             );

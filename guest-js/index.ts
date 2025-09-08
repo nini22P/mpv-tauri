@@ -38,7 +38,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
 };
 
 /**
- * Initialize MPV player.
+ * Initialize mpv player.
  * 
  * @example
  * ```typescript
@@ -47,7 +47,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * // Properties to observe
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
  * 
- * // MPV configuration
+ * // mpv configuration
  * const mpvConfig: MpvConfig = {
  *   mpvArgs: [
  *     '--vo=gpu-next',
@@ -56,14 +56,14 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  *   observedProperties: OBSERVED_PROPERTIES,
  * };
  * 
- * // Initialize MPV
+ * // Initialize mpv
  * try {
  *   await initializeMpv(mpvConfig);
  * } catch (error) {
- *   console.error('Failed to initialize MPV:', error);
+ *   console.error('Failed to initialize mpv:', error);
  * }
  * 
- * // Destroy MPV when no longer needed
+ * // Destroy mpv when no longer needed
  * await destroyMpv();
  * ```
  *
@@ -71,7 +71,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * @param {string} [windowLabel] - The label of the target window. Defaults to the current window's label.
  * @returns {Promise<string>} A promise that resolves with the actual window label used for initialization.
  *
- * @throws {Error} Throws an error if MPV initialization fails (e.g., mpv executable not in PATH).
+ * @throws {Error} Throws an error if mpv initialization fails (e.g., mpv executable not in PATH).
  */
 export async function initializeMpv(
   mpvConfig?: MpvConfig,
@@ -92,7 +92,7 @@ export async function initializeMpv(
 }
 
 /**
- * Destroy MPV player.
+ * Destroy mpv player.
  * 
  * @example
  * ```typescript
@@ -115,7 +115,7 @@ export async function destroyMpv(windowLabel?: string): Promise<void> {
 }
 
 /**
- * Listen to MPV property change events.
+ * Listen to mpv property change events.
  * 
  * @example
  * ```typescript
@@ -148,7 +148,7 @@ export async function destroyMpv(windowLabel?: string): Promise<void> {
  * ```
  *
  * @param {readonly string[]} properties - Properties to observe
- * @param {function} callback - Function to call when MPV events are received
+ * @param {function} callback - Function to call when mpv events are received
  * @param {string} [windowLabel] - Target window label, defaults to current window
  * @returns {Promise<UnlistenFn>} Function to call to stop listening
  *
@@ -160,7 +160,7 @@ export async function observeMpvProperties<T extends ReadonlyArray<string>>(
 ): Promise<UnlistenFn>;
 
 /**
- * Listen to MPV property change events with common properties
+ * Listen to mpv property change events with common properties
  * 
  * @example
  * ```typescript
@@ -189,7 +189,7 @@ export async function observeMpvProperties<T extends ReadonlyArray<string>>(
  * unlisten();
  * ```
  *
- * @param {function} callback - Function to call when MPV events are received
+ * @param {function} callback - Function to call when mpv events are received
  * @param {string} [windowLabel] - Target window label, defaults to current window
  * @returns {Promise<UnlistenFn>} Function to call to stop listening
  *
@@ -231,7 +231,7 @@ export async function observeMpvProperties(
 }
 
 /**
- * Listen to all MPV events.
+ * Listen to all mpv events.
  * 
  * @example
  * ```typescript
@@ -262,7 +262,7 @@ export async function observeMpvProperties(
  * unlisten();
  * ```
  *
- * @param {(event: MpvEvent) => void} callback - Function to call when MPV events are received
+ * @param {(event: MpvEvent) => void} callback - Function to call when mpv events are received
  * @param {string} [windowLabel] - Target window label, defaults to current window
  * @returns {Promise<UnlistenFn>} Function to call to stop listening
  *
@@ -282,7 +282,7 @@ export async function listenMpvEvents(
 }
 
 /**
- * Send MPV command
+ * Send mpv command
  * 
  * @example
  * ```typescript
@@ -307,11 +307,11 @@ export async function listenMpvEvents(
  * console.log('Duration:', duration.data);
  * ```
  *
- * @param {MpvCommand} command - The command object to send to MPV. The `command` property is an array where the first element is the command name, followed by its parameters.
+ * @param {MpvCommand} command - The command object to send to mpv. The `command` property is an array where the first element is the command name, followed by its parameters.
  * @param {string} [windowLabel] - Target window label, defaults to current window.
- * @returns {Promise<MpvCommandResponse>} A promise that resolves with the response from MPV.
+ * @returns {Promise<MpvCommandResponse>} A promise that resolves with the response from mpv.
  *
- * @throws {Error} Throws an error if the command fails or MPV returns an error status.
+ * @throws {Error} Throws an error if the command fails or mpv returns an error status.
  *
  * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
  */
