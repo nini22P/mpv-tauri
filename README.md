@@ -1,14 +1,17 @@
-# Tauri Plugin MPV
+# Tauri Plugin mpv
 
-A Tauri plugin that embeds MPV media player window into your Tauri applications.
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/tauri-plugin-mpv-api.svg)](https://www.npmjs.com/package/tauri-plugin-mpv-api)
+![NPM Downloads](https://img.shields.io/npm/d18m/tauri-plugin-mpv-api)
+[![Build Status](https://github.com/nini22P/tauri-plugin-mpv/actions/workflows/ci.yml/badge.svg)](https://github.com/nini22P/tauri-plugin-mpv/actions/workflows/ci.yml)
 
-This plugin provides a simple and efficient way to embed MPV into your Tauri applications. It uses MPV's JSON IPC interface to communicate with the MPV process.
+A Tauri plugin to embed the mpv player in your app via JSON IPC.
 
 ## Installation
 
 ### Prerequisites
 
-- [MPV](https://mpv.io/) must be installed and available in your system PATH
+- [mpv](https://mpv.io/) must be installed and available in your system PATH
 - Tauri v2.x
 - Node.js 18+
 
@@ -20,7 +23,7 @@ npm run tauri add mpv
 
 ### Configure Window Transparency
 
-For MPV to properly embed into your Tauri window, you need to configure transparency:
+For mpv to properly embed into your Tauri window, you need to configure transparency:
 
 #### 1. Set window transparency in `tauri.conf.json`:
 
@@ -57,7 +60,7 @@ import { destroyMpv, initializeMpv, MpvConfig, observeMpvProperties, sendMpvComm
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
 
-// MPV configuration
+// mpv configuration
 const mpvConfig: MpvConfig = {
   mpvArgs: [
     '--vo=gpu-next',
@@ -67,16 +70,16 @@ const mpvConfig: MpvConfig = {
   ipcTimeoutMs: 2000,
 };
 
-// Initialize MPV
+// Initialize mpv
 try {
-  console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
+  console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
   await initializeMpv(mpvConfig);
-  console.log('MPV initialization completed successfully!');
+  console.log('mpv initialization completed successfully!');
 } catch (error) {
-  console.error('MPV initialization failed:', error);
+  console.error('mpv initialization failed:', error);
 }
 
-// Destroy MPV when no longer needed
+// Destroy mpv when no longer needed
 await destroyMpv();
 
 // Observe properties

@@ -28,21 +28,21 @@ pub fn init_mpv_process<R: Runtime>(
         match child.try_wait() {
             Ok(Some(_status)) => {
                 warn!(
-                    "Stale MPV process for window '{}' found and removed. Re-initializing...",
+                    "Stale mpv process for window '{}' found and removed. Re-initializing...",
                     window_label
                 );
                 processes.remove(window_label);
             }
             Ok(None) => {
                 info!(
-                    "MPV process for window '{}' is still running. Skipping initialization.",
+                    "mpv process for window '{}' is still running. Skipping initialization.",
                     window_label
                 );
                 return Ok(());
             }
             Err(e) => {
                 let error_message = format!(
-                    "Failed to check status of existing MPV process for window '{}': {}",
+                    "Failed to check status of existing mpv process for window '{}': {}",
                     window_label, e
                 );
                 error!("{}", error_message);
@@ -51,17 +51,17 @@ pub fn init_mpv_process<R: Runtime>(
         }
     }
 
-    info!("Initializing MPV for window '{}'...", window_label);
+    info!("Initializing mpv for window '{}'...", window_label);
 
     let ipc_pipe = get_ipc_pipe(&window_label);
 
     debug!("Using IPC pipe: {}", ipc_pipe);
     debug!(
-        "Starting MPV process for window '{}' (WID: {})",
+        "Starting mpv process for window '{}' (WID: {})",
         window_label, window_handle
     );
 
-    // Default MPV arguments
+    // Default mpv arguments
     // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
         format!("--wid={}", window_handle),
@@ -77,7 +77,7 @@ pub fn init_mpv_process<R: Runtime>(
     let mpv_path = mpv_config.mpv_path.unwrap_or_else(|| "mpv".to_string());
 
     debug!(
-        "Spawning MPV process for window '{}' with args: {} {}",
+        "Spawning mpv process for window '{}' with args: {} {}",
         window_label,
         mpv_path,
         args.join(" ")
@@ -103,7 +103,7 @@ pub fn init_mpv_process<R: Runtime>(
                     let reader = BufReader::new(stdout);
                     for line in reader.lines().flatten() {
                         if show_mpv_output {
-                            trace!("MPV stdout [{}] {}", window_label_clone, line);
+                            trace!("mpv stdout [{}] {}", window_label_clone, line);
                         }
                         if let Ok(mut queue) = log_queue_clone.lock() {
                             queue.push_back(line);
@@ -118,23 +118,23 @@ pub fn init_mpv_process<R: Runtime>(
             match wait_for_ipc_server(&ipc_pipe, ipc_timeout, window_label) {
                 Ok(startup_duration) => {
                     info!(
-                        "MPV IPC server for window '{}' is ready. Startup took {}ms.",
+                        "mpv IPC server for window '{}' is ready. Startup took {}ms.",
                         window_label,
                         startup_duration.as_millis()
                     );
                 }
                 Err(e) => {
                     let mut error_message = format!(
-                        "MPV startup failed for window '{}'. Collected stdout:",
+                        "mpv startup failed for window '{}'. Collected stdout:",
                         window_label,
                     );
                     error!("{}", error_message);
                     error_message.push_str("\n");
                     if let Ok(mut queue) = log_queue.lock() {
                         while let Some(line) = queue.pop_front() {
-                            error!("MPV stdout [{}] {}", window_label, line);
+                            error!("mpv stdout [{}] {}", window_label, line);
                             error_message
-                                .push_str(&format!("MPV stdout [{}] {}\n", window_label, line));
+                                .push_str(&format!("mpv stdout [{}] {}\n", window_label, line));
                         }
                     }
                     error!("{}", e);
@@ -145,7 +145,7 @@ pub fn init_mpv_process<R: Runtime>(
             }
 
             info!(
-                "MPV process (PID: {}) started for window '{}'. Initialization complete.",
+                "mpv process (PID: {}) started for window '{}'. Initialization complete.",
                 child.id(),
                 window_label,
             );
@@ -169,7 +169,7 @@ pub fn init_mpv_process<R: Runtime>(
         }
         Err(e) => {
             let error_message = format!(
-                "Failed to start MPV: {}. Is mpv installed and in your PATH?",
+                "Failed to start mpv: {}. Is mpv installed and in your PATH?",
                 e
             );
             error!("For window '{}': {}", window_label, error_message);
@@ -191,7 +191,7 @@ pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
 
     if let Some(mut child) = processes.remove(window_label) {
         info!(
-            "Attempting to kill MPV process for window '{}' (PID: {})...",
+            "Attempting to kill mpv process for window '{}' (PID: {})...",
             window_label,
             child.id()
         );
@@ -199,14 +199,14 @@ pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
             Ok(_) => {
                 let _ = child.wait();
                 info!(
-                    "MPV process for window '{}' killed successfully.",
+                    "mpv process for window '{}' killed successfully.",
                     window_label
                 );
                 Ok(())
             }
             Err(e) => {
                 let error_message = format!(
-                    "Failed to kill MPV process for window '{}': {}",
+                    "Failed to kill mpv process for window '{}': {}",
                     window_label, e
                 );
                 error!("{}", error_message);
@@ -215,7 +215,7 @@ pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
         }
     } else {
         info!(
-            "No MPV process found for window '{}' to kill. It might have already been cleaned up.",
+            "No mpv process found for window '{}' to kill. It might have already been cleaned up.",
             window_label
         );
         Ok(())
