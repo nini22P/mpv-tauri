@@ -15,7 +15,7 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-use crate::{ipc::get_ipc_pipe, MpvEvent};
+use crate::{ipc::get_ipc_pipe, process::MPV_PROCESSES, MpvEvent};
 
 lazy_static::lazy_static! {
    pub static ref LISTENER_STOP_SIGNALS: Mutex<HashMap<String, Arc<AtomicBool>>> = Mutex::new(HashMap::new());
@@ -25,7 +25,7 @@ pub fn start_event_listener<R: Runtime>(
     app_handle: AppHandle<R>,
     ipc_timeout: Duration,
     observed_properties: Vec<String>,
-    window_label: String,
+    window_label: &str,
 ) {
     let stop_signal = Arc::new(AtomicBool::new(true));
 
@@ -40,6 +40,25 @@ pub fn start_event_listener<R: Runtime>(
     let mut retry_count = 0;
 
     loop {
+        {
+            let mut processes = MPV_PROCESSES.lock().unwrap();
+            if let Some(child) = processes.get_mut(window_label) {
+                if child.try_wait().unwrap_or(None).is_some() {
+                    info!(
+                        "MPV process for window '{}' found terminated at start of loop. Stopping listener.",
+                        window_label
+                    );
+                    break;
+                }
+            } else {
+                info!(
+                    "MPV process handle for window '{}' not found at start of loop. Stopping listener.",
+                    window_label
+                );
+                break;
+            }
+        }
+
         if !stop_signal.load(Ordering::Relaxed) {
             info!(
                 "Event listener for window '{}' received stop signal. Exiting loop.",
@@ -150,6 +169,8 @@ pub fn start_event_listener<R: Runtime>(
                     "MPV event listener for window '{}' has disconnected.",
                     window_label
                 );
+                std::thread::sleep(Duration::from_millis(500));
+                continue;
             }
             Err(e) => {
                 debug!(
@@ -172,7 +193,7 @@ pub fn start_event_listener<R: Runtime>(
 
         {
             let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
-            signals.remove(&window_label);
+            signals.remove(window_label);
             info!(
                 "Event listener for window '{}' has stopped and cleaned up its signal.",
                 window_label
