@@ -161,7 +161,7 @@ pub fn init_mpv_process<R: Runtime>(
                     app_handle,
                     ipc_timeout,
                     observed_properties,
-                    window_label_clone,
+                    &window_label_clone,
                 );
             });
 
