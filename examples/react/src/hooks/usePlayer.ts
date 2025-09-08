@@ -75,6 +75,8 @@ const usePlayer = (): Player => {
         mpvArgs: [
           '--vo=gpu-next',
           '--hwdec=auto-safe',
+          '--keep-open=yes',
+          '--force-window',
         ],
         observedProperties: OBSERVED_PROPERTIES,
         ipcTimeoutMs: 2000,

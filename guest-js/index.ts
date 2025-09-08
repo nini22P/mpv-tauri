@@ -27,10 +27,10 @@ export const COMMON_PROPERTIES = [
 
 export const DEFAULT_MPV_CONFIG: MpvConfig = {
   mpvArgs: [
-    '--no-config',
     '--vo=gpu-next',
     '--hwdec=auto-safe',
-    '--media-controls=no',
+    '--keep-open=yes',
+    '--force-window',
   ],
   observedProperties: COMMON_PROPERTIES,
   ipcTimeoutMs: 2000,
@@ -52,6 +52,8 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  *   mpvArgs: [
  *     '--vo=gpu-next',
  *     '--hwdec=auto-safe',
+ *     '--keep-open=yes',
+ *     '--force-window',
  *   ],
  *   observedProperties: OBSERVED_PROPERTIES,
  * };

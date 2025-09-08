@@ -67,9 +67,6 @@ pub fn init_mpv_process<R: Runtime>(
         format!("--wid={}", window_handle),
         format!("--input-ipc-server={}", ipc_pipe),
         "--profile=libmpv".to_string(),
-        "--force-window".to_string(),
-        "--keep-open=yes".to_string(),
-        "--border=no".to_string(),
     ];
 
     args.extend(mpv_config.mpv_args.unwrap_or_default());
