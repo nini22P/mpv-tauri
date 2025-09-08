@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "MPV Tauri",
+  "mainBinaryName": "mpv-tauri",
   "version": "0.1.0",
-  "identifier": "nini22P.mpv-tauri",
+  "identifier": "nini22p.mpv-tauri",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
