@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MPV Tauri",
+  "productName": "mpv-tauri",
   "mainBinaryName": "mpv-tauri",
   "version": "0.1.0",
   "identifier": "nini22p.mpv-tauri",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "MPV Tauri",
+        "title": "mpv-tauri",
         "width": 1280,
         "height": 720,
         "transparent": true,
@@ -37,7 +37,7 @@
   },
   "plugins": {
     "cli": {
-      "description": "MPV Tauri",
+      "description": "mpv-tauri",
       "args": [
         {
           "name": "source",

@@ -23,7 +23,7 @@ const Player = ({ source }: { source: string | null }) => {
   }, [player.connection, source])
 
   useEffect(() => {
-    getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - MPV Tauri` : 'MPV Tauri');
+    getCurrentWindow().setTitle(player.currentFile ? `${player.currentFile} - mpv-tauri` : 'mpv-tauri');
   }, [player.currentFile])
 
   return (

@@ -81,11 +81,11 @@ const usePlayer = (): Player => {
       };
 
       try {
-        console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
+        console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
         await initializeMpv(mpvConfig);
-        console.log('MPV initialization completed successfully!');
+        console.log('mpv initialization completed successfully!');
       } catch (error) {
-        console.error('MPV initialization failed:', error);
+        console.error('mpv initialization failed:', error);
         setState(prev => ({ ...prev, connection: 'error' }));
       }
     })();

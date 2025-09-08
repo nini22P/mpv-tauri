@@ -55,7 +55,7 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
 
   return (
     <div ref={videoRectRef} className="video-rect">
-      {connection === 'error' && 'MPV connection timeout. Is mpv installed and in your PATH?'}
+      {connection === 'error' && 'mpv connection timeout. Is mpv installed and in your PATH?'}
     </div>
   );
 };

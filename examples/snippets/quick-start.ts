@@ -3,7 +3,7 @@ import { destroyMpv, initializeMpv, MpvConfig, observeMpvProperties, sendMpvComm
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
 
-// MPV configuration
+// mpv configuration
 const mpvConfig: MpvConfig = {
   mpvArgs: [
     '--vo=gpu-next',
@@ -13,16 +13,16 @@ const mpvConfig: MpvConfig = {
   ipcTimeoutMs: 2000,
 };
 
-// Initialize MPV
+// Initialize mpv
 try {
-  console.log('Initializing MPV with properties:', OBSERVED_PROPERTIES);
+  console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
   await initializeMpv(mpvConfig);
-  console.log('MPV initialization completed successfully!');
+  console.log('mpv initialization completed successfully!');
 } catch (error) {
-  console.error('MPV initialization failed:', error);
+  console.error('mpv initialization failed:', error);
 }
 
-// Destroy MPV when no longer needed
+// Destroy mpv when no longer needed
 await destroyMpv();
 
 // Observe properties

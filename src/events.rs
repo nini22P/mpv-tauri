@@ -45,14 +45,14 @@ pub fn start_event_listener<R: Runtime>(
             if let Some(child) = processes.get_mut(window_label) {
                 if child.try_wait().unwrap_or(None).is_some() {
                     info!(
-                        "MPV process for window '{}' found terminated at start of loop. Stopping listener.",
+                        "mpv process for window '{}' found terminated at start of loop. Stopping listener.",
                         window_label
                     );
                     break;
                 }
             } else {
                 info!(
-                    "MPV process handle for window '{}' not found at start of loop. Stopping listener.",
+                    "mpv process handle for window '{}' not found at start of loop. Stopping listener.",
                     window_label
                 );
                 break;
@@ -144,21 +144,21 @@ pub fn start_event_listener<R: Runtime>(
                                         app_handle.emit_to(&window_label, &event_name, &payload)
                                     {
                                         error!(
-                                            "Failed to emit MPV event for window '{}': {}",
+                                            "Failed to emit mpv event for window '{}': {}",
                                             window_label, e
                                         );
                                     }
                                 }
                             } else {
                                 warn!(
-                                    "Failed to parse MPV event line as JSON for window '{}'. Line: '{}'",
+                                    "Failed to parse mpv event line as JSON for window '{}'. Line: '{}'",
                                     window_label, line,
                                 );
                             }
                         }
                         Err(e) => {
                             error!(
-                                "Error reading from MPV IPC on window '{}': {}",
+                                "Error reading from mpv IPC on window '{}': {}",
                                 window_label, e
                             );
                             break;
@@ -166,7 +166,7 @@ pub fn start_event_listener<R: Runtime>(
                     }
                 }
                 info!(
-                    "MPV event listener for window '{}' has disconnected.",
+                    "mpv event listener for window '{}' has disconnected.",
                     window_label
                 );
                 std::thread::sleep(Duration::from_millis(500));
@@ -180,7 +180,7 @@ pub fn start_event_listener<R: Runtime>(
 
                 if retry_count >= max_retries {
                     error!(
-                        "Max retries reached for window '{}'. MPV IPC connection failed.",
+                        "Max retries reached for window '{}'. mpv IPC connection failed.",
                         window_label
                     );
                     break;
