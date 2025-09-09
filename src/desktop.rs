@@ -1,27 +1,36 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use log::{error, info, warn};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::Result;
 use crate::{ipc, models::*, process};
+use crate::{MpvInstance, Result};
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
     _api: PluginApi<R, C>,
 ) -> crate::Result<Mpv<R>> {
     info!("Plugin registered.");
-    let mpv = Mpv(app.clone());
+    let mpv = Mpv {
+        app: app.clone(),
+        instances: Mutex::new(HashMap::new()),
+    };
     Ok(mpv)
 }
 
-pub struct Mpv<R: Runtime>(AppHandle<R>);
+pub struct Mpv<R: Runtime> {
+    app: AppHandle<R>,
+    pub instances: Mutex<HashMap<String, MpvInstance>>,
+}
 
 impl<R: Runtime> Mpv<R> {
     pub fn initialize_mpv(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        let app_handle = self.0.clone();
+        let app = self.app.clone();
 
-        if let Some(webview_window) = app_handle.get_webview_window(&window_label) {
+        if let Some(webview_window) = app.get_webview_window(&window_label) {
             let handle_result = webview_window.window_handle();
 
             match handle_result {
@@ -40,7 +49,7 @@ impl<R: Runtime> Mpv<R> {
                         }
                     };
 
-                    process::init_mpv_process(app_handle, window_handle, mpv_config, window_label)?;
+                    process::init_mpv_process(&app, window_handle, mpv_config, window_label)?;
                 }
                 Err(e) => {
                     error!(
@@ -126,6 +135,6 @@ impl<R: Runtime> Mpv<R> {
     }
 
     pub fn destroy_mpv(&self, window_label: &str) -> Result<()> {
-        process::kill_mpv_process(window_label)
+        process::kill_mpv_process(&self.app, window_label)
     }
 }

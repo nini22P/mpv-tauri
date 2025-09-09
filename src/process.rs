@@ -1,53 +1,31 @@
-use log::{debug, error, info, trace, warn};
-use std::collections::{HashMap, VecDeque};
+use log::{debug, error, info, trace};
+use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Runtime};
 
-use crate::events::{self, stop_event_listener};
+use crate::events::{self};
 use crate::ipc::get_ipc_pipe;
-use crate::MpvConfig;
-
-lazy_static::lazy_static! {
-   pub static ref MPV_PROCESSES: Mutex<HashMap<String, Child>> = Mutex::new(HashMap::new());
-}
+use crate::{MpvConfig, MpvExt, MpvInstance};
 
 pub fn init_mpv_process<R: Runtime>(
-    app_handle: AppHandle<R>,
+    app: &AppHandle<R>,
     window_handle: i64,
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
-    let mut processes = MPV_PROCESSES.lock().unwrap();
-
-    if let Some(child) = processes.get_mut(window_label) {
-        match child.try_wait() {
-            Ok(Some(_status)) => {
-                warn!(
-                    "Stale mpv process for window '{}' found and removed. Re-initializing...",
-                    window_label
-                );
-                processes.remove(window_label);
-            }
-            Ok(None) => {
-                info!(
-                    "mpv process for window '{}' is still running. Skipping initialization.",
-                    window_label
-                );
-                return Ok(());
-            }
-            Err(e) => {
-                let error_message = format!(
-                    "Failed to check status of existing mpv process for window '{}': {}",
-                    window_label, e
-                );
-                error!("{}", error_message);
-                return Err(crate::Error::MpvProcessError(error_message));
-            }
+    let mut instances_lock = app.mpv().instances.lock().unwrap();
+    if let Some(instance) = instances_lock.get_mut(window_label) {
+        if instance.process.try_wait().unwrap_or(None).is_none() {
+            info!(
+                "mpv process for window '{}' is still running. Skipping initialization.",
+                window_label
+            );
+            return Ok(());
         }
     }
 
@@ -147,20 +125,24 @@ pub fn init_mpv_process<R: Runtime>(
                 window_label,
             );
 
-            processes.insert(window_label.to_string(), child);
-
             let window_label_clone = window_label.to_string();
-
             let observed_properties = mpv_config.observed_properties.clone().unwrap_or_default();
+            let app_clone = app.clone();
+            let process_id = child.id();
 
             std::thread::spawn(move || {
                 events::start_event_listener(
-                    app_handle,
+                    &app_clone,
+                    process_id,
                     ipc_timeout,
                     observed_properties,
                     &window_label_clone,
                 );
             });
+
+            let instance = MpvInstance { process: child };
+
+            instances_lock.insert(window_label.to_string(), instance);
 
             Ok(())
         }
@@ -181,20 +163,21 @@ pub fn init_mpv_process<R: Runtime>(
     }
 }
 
-pub fn kill_mpv_process(window_label: &str) -> crate::Result<()> {
-    stop_event_listener(window_label);
+pub fn kill_mpv_process<R: Runtime>(app: &AppHandle<R>, window_label: &str) -> crate::Result<()> {
+    let instance_to_kill = {
+        let mut instances_lock = app.mpv().instances.lock().unwrap();
+        instances_lock.remove(window_label)
+    };
 
-    let mut processes = MPV_PROCESSES.lock().unwrap();
-
-    if let Some(mut child) = processes.remove(window_label) {
+    if let Some(mut instance) = instance_to_kill {
         info!(
             "Attempting to kill mpv process for window '{}' (PID: {})...",
             window_label,
-            child.id()
+            instance.process.id()
         );
-        match child.kill() {
+        match instance.process.kill() {
             Ok(_) => {
-                let _ = child.wait();
+                let _ = instance.process.wait();
                 info!(
                     "mpv process for window '{}' killed successfully.",
                     window_label

@@ -1,11 +1,6 @@
 use log::{debug, error, info, warn};
 use std::{
-    collections::HashMap,
     io::{BufRead, BufReader, Write},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
     time::Duration,
 };
 use tauri::{AppHandle, Emitter, Runtime};
@@ -15,25 +10,15 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-use crate::{ipc::get_ipc_pipe, process::MPV_PROCESSES, MpvEvent};
-
-lazy_static::lazy_static! {
-   pub static ref LISTENER_STOP_SIGNALS: Mutex<HashMap<String, Arc<AtomicBool>>> = Mutex::new(HashMap::new());
-}
+use crate::{ipc::get_ipc_pipe, process::kill_mpv_process, MpvEvent, MpvExt};
 
 pub fn start_event_listener<R: Runtime>(
-    app_handle: AppHandle<R>,
+    app: &AppHandle<R>,
+    process_id: u32,
     ipc_timeout: Duration,
     observed_properties: Vec<String>,
     window_label: &str,
 ) {
-    let stop_signal = Arc::new(AtomicBool::new(true));
-
-    {
-        let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
-        signals.insert(window_label.to_string(), Arc::clone(&stop_signal));
-    }
-
     let ipc_pipe = get_ipc_pipe(&window_label);
 
     let max_retries = 5;
@@ -41,9 +26,17 @@ pub fn start_event_listener<R: Runtime>(
 
     loop {
         {
-            let mut processes = MPV_PROCESSES.lock().unwrap();
-            if let Some(child) = processes.get_mut(window_label) {
-                if child.try_wait().unwrap_or(None).is_some() {
+            let mut instances_lock = app.mpv().instances.lock().unwrap();
+
+            if let Some(instance) = instances_lock.get_mut(window_label) {
+                if instance.process.id() != process_id {
+                    info!(
+                        "mpv process for window '{}' has a different PID. Stopping listener.",
+                        window_label
+                    );
+                    break;
+                }
+                if instance.process.try_wait().unwrap_or(None).is_some() {
                     info!(
                         "mpv process for window '{}' found terminated at start of loop. Stopping listener.",
                         window_label
@@ -57,14 +50,6 @@ pub fn start_event_listener<R: Runtime>(
                 );
                 break;
             }
-        }
-
-        if !stop_signal.load(Ordering::Relaxed) {
-            info!(
-                "Event listener for window '{}' received stop signal. Exiting loop.",
-                window_label
-            );
-            break;
         }
 
         retry_count += 1;
@@ -130,10 +115,6 @@ pub fn start_event_listener<R: Runtime>(
 
                 let reader = BufReader::new(stream);
                 for line_result in reader.lines() {
-                    if !stop_signal.load(Ordering::Relaxed) {
-                        break;
-                    }
-
                     match line_result {
                         Ok(line) => {
                             if let Ok(payload) = serde_json::from_str::<MpvEvent>(&line) {
@@ -141,7 +122,7 @@ pub fn start_event_listener<R: Runtime>(
                                     let event_name = format!("mpv-event-{}", window_label);
 
                                     if let Err(e) =
-                                        app_handle.emit_to(&window_label, &event_name, &payload)
+                                        app.emit_to(&window_label, &event_name, &payload)
                                     {
                                         error!(
                                             "Failed to emit mpv event for window '{}': {}",
@@ -191,24 +172,6 @@ pub fn start_event_listener<R: Runtime>(
             }
         }
 
-        {
-            let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
-            signals.remove(window_label);
-            info!(
-                "Event listener for window '{}' has stopped and cleaned up its signal.",
-                window_label
-            );
-        }
-    }
-}
-
-pub fn stop_event_listener(window_label: &str) {
-    let mut signals = LISTENER_STOP_SIGNALS.lock().unwrap();
-    if let Some(stop_signal) = signals.remove(window_label) {
-        stop_signal.store(false, Ordering::SeqCst);
-        info!(
-            "Stop signal sent to event listener for window '{}'.",
-            window_label
-        );
+        kill_mpv_process(app, window_label).unwrap_or_default();
     }
 }
