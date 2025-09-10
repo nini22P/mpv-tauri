@@ -10,7 +10,7 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-use crate::{ipc::get_ipc_pipe, process::kill_mpv_process, MpvEvent, MpvExt};
+use crate::{ipc::get_ipc_pipe, MpvEvent, MpvExt};
 
 pub fn start_event_listener<R: Runtime>(
     app: &AppHandle<R>,
@@ -29,24 +29,27 @@ pub fn start_event_listener<R: Runtime>(
             let mut instances_lock = app.mpv().instances.lock().unwrap();
 
             if let Some(instance) = instances_lock.get_mut(window_label) {
-                if instance.process.id() != process_id {
+                if process_id != instance.process.id() {
                     info!(
-                        "mpv process for window '{}' has a different PID. Stopping listener.",
-                        window_label
+                        "Stopping stale listener for old PID {} for window '{}', detected new mpv process (PID {}).",
+                        process_id,
+                        window_label,
+                        instance.process.id(),
                     );
                     break;
                 }
                 if instance.process.try_wait().unwrap_or(None).is_some() {
                     info!(
-                        "mpv process for window '{}' found terminated at start of loop. Stopping listener.",
-                        window_label
+                        "Stopping listener for associated mpv process (PID {}) for window '{}', as the process has terminated.",
+                        instance.process.id(),
+                        window_label,
                     );
                     break;
                 }
             } else {
                 info!(
-                    "mpv process handle for window '{}' not found at start of loop. Stopping listener.",
-                    window_label
+                    "Instance for window '{}' not found. Stopping listener for mpv process (PID: {}) .",
+                    window_label, process_id,
                 );
                 break;
             }
@@ -55,8 +58,8 @@ pub fn start_event_listener<R: Runtime>(
         retry_count += 1;
 
         debug!(
-            "Event listener for window '{}' connecting... (attempt {}/{})",
-            window_label, retry_count, max_retries
+            "Event listener for mpv process (PID: {}) for window '{}' connecting... (attempt {}/{})",
+           process_id, window_label, retry_count, max_retries,
         );
 
         #[cfg(windows)]
@@ -68,8 +71,9 @@ pub fn start_event_listener<R: Runtime>(
         match stream_result {
             Ok(mut stream) => {
                 info!(
-                    "Event listener for window '{}' connected successfully.",
-                    window_label
+                    "Successfully connected event listener for mpv process (PID: {}) for window '{}'.",
+                    process_id,
+                    window_label,
                 );
 
                 retry_count = 0;
@@ -102,14 +106,16 @@ pub fn start_event_listener<R: Runtime>(
 
                 if !successful_properties.is_empty() {
                     info!(
-                        "Successfully observed properties for window '{}': {:?}",
-                        window_label, successful_properties
+                        "Successfully observed properties for mpv process (PID: {}) for window '{}': {:?}",
+                        process_id,
+                        window_label, 
+                        successful_properties,
                     );
                 }
                 if !failed_properties.is_empty() {
                     warn!(
-                        "Failed to observe properties for window '{}': {:?}",
-                        window_label, failed_properties
+                        "Failed to observe properties for mpv process (PID: {}) for window '{}': {:?}",
+                        process_id, window_label, failed_properties
                     );
                 }
 
@@ -125,53 +131,64 @@ pub fn start_event_listener<R: Runtime>(
                                         app.emit_to(&window_label, &event_name, &payload)
                                     {
                                         error!(
-                                            "Failed to emit mpv event for window '{}': {}",
-                                            window_label, e
+                                            "Failed to emit mpv event for mpv process (PID: {}) for window '{}': {}",
+                                            process_id,
+                                            window_label,
+                                            e,
                                         );
                                     }
                                 }
                             } else {
                                 warn!(
-                                    "Failed to parse mpv event line as JSON for window '{}'. Line: '{}'",
-                                    window_label, line,
+                                    "Failed to parse mpv event line as JSON for mpv process (PID: {}) for window '{}'. Line: '{}'",
+                                    process_id,
+                                    window_label,
+                                    line,
                                 );
                             }
                         }
                         Err(e) => {
                             error!(
-                                "Error reading from mpv IPC on window '{}': {}",
-                                window_label, e
+                                "Error reading from mpv IPC for mpv process (PID: {}) for window '{}': {}",
+                                process_id,
+                                window_label,
+                                e,
                             );
                             break;
                         }
                     }
                 }
                 info!(
-                    "mpv event listener for window '{}' has disconnected.",
-                    window_label
+                    "Event listener for mpv process (PID: {}) for window '{}' has disconnected.",
+                    process_id, window_label,
                 );
-                std::thread::sleep(Duration::from_millis(500));
+                std::thread::sleep(ipc_timeout);
                 continue;
             }
             Err(e) => {
                 debug!(
-                    "Failed to connect to IPC for window '{}' (attempt {}/{}): {}",
-                    window_label, retry_count, max_retries, e
+                    "Failed to connect to IPC for mpv process (PID: {}) for window '{}' (attempt {}/{}): {}",
+                    process_id,
+                    window_label,
+                    retry_count,
+                    max_retries,
+                    e,
                 );
 
                 if retry_count >= max_retries {
                     error!(
-                        "Max retries reached for window '{}'. mpv IPC connection failed.",
-                        window_label
+                        "Max retries reached for mpv process (PID: {}) for window '{}'. mpv IPC connection failed.",
+                        process_id, window_label,
                     );
                     break;
                 }
 
-                debug!("Retrying IPC connection for window '{}'...", window_label);
+                debug!(
+                    "Retrying IPC connection for mpv process (PID: {}) for window '{}'...",
+                    process_id, window_label,
+                );
                 std::thread::sleep(ipc_timeout);
             }
         }
-
-        kill_mpv_process(app, window_label).unwrap_or_default();
     }
 }

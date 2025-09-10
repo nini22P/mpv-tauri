@@ -1,4 +1,4 @@
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -18,20 +18,33 @@ pub fn init_mpv_process<R: Runtime>(
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
+    let ipc_pipe = get_ipc_pipe(&window_label);
+    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms.unwrap_or(2000));
+
     let mut instances_lock = app.mpv().instances.lock().unwrap();
     if let Some(instance) = instances_lock.get_mut(window_label) {
         if instance.process.try_wait().unwrap_or(None).is_none() {
-            info!(
-                "mpv process for window '{}' is still running. Skipping initialization.",
-                window_label
-            );
-            return Ok(());
+            match wait_for_ipc_server(&ipc_pipe, ipc_timeout, window_label) {
+                Ok(_) => {
+                    info!(
+                        "mpv process (PID: {}) for window '{}' is still running. Skipping initialization.",
+                        instance.process.id(),
+                        window_label
+                    );
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to connect to IPC for window '{}': {}, killing and restarting...",
+                        window_label, e
+                    );
+                    instance.process.kill().unwrap();
+                }
+            }
         }
     }
 
     info!("Initializing mpv for window '{}'...", window_label);
-
-    let ipc_pipe = get_ipc_pipe(&window_label);
 
     debug!("Using IPC pipe: {}", ipc_pipe);
     debug!(
@@ -59,7 +72,6 @@ pub fn init_mpv_process<R: Runtime>(
     );
 
     let args_clone = args.clone();
-    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms.unwrap_or(2000));
     let show_mpv_output = mpv_config.show_mpv_output.unwrap_or(false);
 
     match Command::new(mpv_path.clone())
@@ -130,6 +142,9 @@ pub fn init_mpv_process<R: Runtime>(
             let app_clone = app.clone();
             let process_id = child.id();
 
+            let instance = MpvInstance { process: child };
+            instances_lock.insert(window_label.to_string(), instance);
+
             std::thread::spawn(move || {
                 events::start_event_listener(
                     &app_clone,
@@ -139,10 +154,6 @@ pub fn init_mpv_process<R: Runtime>(
                     &window_label_clone,
                 );
             });
-
-            let instance = MpvInstance { process: child };
-
-            instances_lock.insert(window_label.to_string(), instance);
 
             Ok(())
         }
@@ -171,23 +182,26 @@ pub fn kill_mpv_process<R: Runtime>(app: &AppHandle<R>, window_label: &str) -> c
 
     if let Some(mut instance) = instance_to_kill {
         info!(
-            "Attempting to kill mpv process for window '{}' (PID: {})...",
+            "Attempting to kill mpv process (PID: {}) for window '{}'...",
+            instance.process.id(),
             window_label,
-            instance.process.id()
         );
         match instance.process.kill() {
             Ok(_) => {
                 let _ = instance.process.wait();
                 info!(
-                    "mpv process for window '{}' killed successfully.",
-                    window_label
+                    "mpv process (PID: {}) for window '{}' killed successfully.",
+                    instance.process.id(),
+                    window_label,
                 );
                 Ok(())
             }
             Err(e) => {
                 let error_message = format!(
-                    "Failed to kill mpv process for window '{}': {}",
-                    window_label, e
+                    "Failed to kill mpv process (PID: {}) for window '{}': {}",
+                    instance.process.id(),
+                    window_label,
+                    e,
                 );
                 error!("{}", error_message);
                 return Err(crate::Error::MpvProcessError(error_message));
@@ -195,7 +209,7 @@ pub fn kill_mpv_process<R: Runtime>(app: &AppHandle<R>, window_label: &str) -> c
         }
     } else {
         info!(
-            "No mpv process found for window '{}' to kill. It might have already been cleaned up.",
+            "No running mpv process found for window '{}' to kill. It may have already terminated.",
             window_label
         );
         Ok(())
@@ -213,10 +227,6 @@ fn wait_for_ipc_server(
     while start.elapsed() < ipc_timeout {
         if pipe.exists() {
             let elapsed = start.elapsed();
-            debug!(
-                "IPC server for window '{}' at '{}' is ready after {:?}",
-                window_label, ipc_pipe, elapsed
-            );
             return Ok(elapsed);
         }
         thread::sleep(Duration::from_millis(50));

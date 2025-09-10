@@ -1,6 +1,6 @@
 {
   "name": "tauri-plugin-mpv-api",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "author": "22",
   "description": "A Tauri plugin to embed the mpv player in your app via JSON IPC.",
   "license": "MIT",
@@ -48,12 +48,12 @@
     "pretest": "npm run build"
   },
   "dependencies": {
-    "@tauri-apps/api": "2"
+    "@tauri-apps/api": "2.8.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "12.1.4",
-    "rollup": "^4.9.6",
-    "typescript": "^5.3.3",
-    "tslib": "^2.6.2"
+    "rollup": "^4.50.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   }
 }
