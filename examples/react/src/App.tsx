@@ -1,6 +1,6 @@
 import "./App.css";
 import useCli from "./hooks/useCli";
-import Player from "./components/Player";
+import Player from "./pages/Player";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
