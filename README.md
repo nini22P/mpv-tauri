@@ -25,7 +25,7 @@ npm run tauri add mpv
 
 For mpv to properly embed into your Tauri window, you need to configure transparency:
 
-#### 1. Set window transparency in `tauri.conf.json`:
+#### 1. Set window transparency in `tauri.conf.json`
 
 ```json
 {
@@ -42,7 +42,7 @@ For mpv to properly embed into your Tauri window, you need to configure transpar
 }
 ```
 
-#### 2. Set web page background to transparent in your CSS:
+#### 2. Set web page background to transparent in your CSS
 
 ```css
 /* In your main CSS file */
@@ -114,8 +114,8 @@ await sendMpvCommand({ command: ['loadfile', '/path/to/video.mp4'] });
 
 ## Examples
 
-* [examples/react](./examples/react/): complete working examples.
-* [examples/snippets](./examples/snippets/): code snippets.
+- [examples/react](./examples/react/): Complete working examples.
+- [examples/snippets](./examples/snippets/): Code snippets.
 
 ## Platform Support
 
