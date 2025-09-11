@@ -14,7 +14,7 @@ const Player = ({ source }: { source: string | null }) => {
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
 
   const connection = usePlayerStore.use.connection();
-  const currentFile = usePlayerStore.use.currentFile();
+  const filename = usePlayerStore.use.filename();
   const isFullscreen = usePlayerStore.use.isFullscreen();
 
   useEffect(() => {
@@ -30,8 +30,8 @@ const Player = ({ source }: { source: string | null }) => {
   }, [connection, source])
 
   useEffect(() => {
-    getCurrentWindow().setTitle(currentFile ? `${currentFile} - mpv-tauri` : 'mpv-tauri');
-  }, [currentFile])
+    getCurrentWindow().setTitle(filename ? `${filename} - mpv-tauri` : 'mpv-tauri');
+  }, [filename])
 
   return (
     <div className="player" onMouseMove={showControls} onMouseLeave={hideControls}>

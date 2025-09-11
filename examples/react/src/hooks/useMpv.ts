@@ -18,16 +18,7 @@ const useMpv = () => {
 
   const connection = usePlayerStore.use.connection();
 
-  const setConnection = usePlayerStore.use.setConnection();
-  const setIsPaused = usePlayerStore.use.setIsPaused();
-  const setCurrentFile = usePlayerStore.use.setCurrentFile();
-  const setPlaylist = usePlayerStore.use.setPlaylist();
-  const setEofReached = usePlayerStore.use.setEofReached();
-  const setTimePos = usePlayerStore.use.setTimePos();
-  const setDuration = usePlayerStore.use.setDuration();
-  const setVolume = usePlayerStore.use.setVolume();
-  const setMute = usePlayerStore.use.setMute();
-  const setSpeed = usePlayerStore.use.setSpeed();
+  const updatePlayerState = usePlayerStore.use.updatePlayerState();
 
   useEffect(() => {
     (async () => {
@@ -40,17 +31,17 @@ const useMpv = () => {
           '--pause',
         ],
         observedProperties: OBSERVED_PROPERTIES,
-        ipcTimeoutMs: 2000,
+        ipcTimeoutMs: 2500,
       };
 
       try {
         console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
         await initializeMpv(mpvConfig);
         console.log('mpv initialization completed successfully!');
-        setConnection('connected');
+        updatePlayerState('connection', 'connected');
       } catch (error) {
         console.error('mpv initialization failed:', error);
-        setConnection('error');
+        updatePlayerState('connection', 'error');
       }
     })();
   }, [])
@@ -68,34 +59,34 @@ const useMpv = () => {
       OBSERVED_PROPERTIES,
       ({ name, data }) => {
         if (connection !== 'connected')
-          setConnection('connected');
+          updatePlayerState('connection', 'connected');
         switch (name) {
           case 'playlist':
-            setPlaylist(data);
+            updatePlayerState('playlist', data);
             break;
           case 'filename':
-            setCurrentFile(data);
+            updatePlayerState('filename', data);
             break;
           case 'pause':
-            setIsPaused(data);
+            updatePlayerState('isPaused', data);
             break;
           case 'eof-reached':
-            setEofReached(data ?? false);
+            updatePlayerState('eofReached', data ?? false);
             break;
           case 'time-pos':
-            setTimePos(data ?? 0);
+            updatePlayerState('timePos', data ?? 0);
             break;
           case 'duration':
-            setDuration(data ?? 0);
+            updatePlayerState('duration', data ?? 0);
             break;
           case 'volume':
-            setVolume(data);
+            updatePlayerState('volume', data);
             break;
           case 'mute':
-            setMute(data);
+            updatePlayerState('mute', data);
             break;
           case 'speed':
-            setSpeed(data);
+            updatePlayerState('speed', data);
             break;
           default:
             console.log(name, data);
