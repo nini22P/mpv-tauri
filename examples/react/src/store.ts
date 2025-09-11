@@ -23,7 +23,7 @@ export interface PlayerStoreState {
   connection: Connection;
   isPaused: boolean;
   playlist: MpvPlaylistItem[];
-  currentFile: string | undefined;
+  filename: string | undefined;
   eofReached: boolean;
   timePos: number;
   duration: number;
@@ -35,24 +35,13 @@ export interface PlayerStoreState {
 }
 
 export interface PlayerStroeActions {
-  setConnection: (connection: PlayerStoreState['connection']) => void;
-  setIsPaused: (isPaused: PlayerStoreState['isPaused']) => void;
-  setCurrentFile: (currentFile: PlayerStoreState['currentFile']) => void;
-  setPlaylist: (playlist: PlayerStoreState['playlist']) => void;
-  setEofReached: (eofReached: PlayerStoreState['eofReached']) => void;
-  setTimePos: (timePos: PlayerStoreState['timePos']) => void;
-  setDuration: (duration: PlayerStoreState['duration']) => void;
-  setIsFullscreen: (isFullscreen: PlayerStoreState['isFullscreen']) => void;
-  setVolume: (volume: PlayerStoreState['volume']) => void;
-  setMute: (mute: PlayerStoreState['mute']) => void;
-  setSpeed: (speed: PlayerStoreState['speed']) => void;
-  setPercentPos: (percentPos: PlayerStoreState['percentPos']) => void;
+  updatePlayerState: <K extends keyof PlayerStoreState>(key: K, value: PlayerStoreState[K]) => void;
 }
 
 const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) => ({
   connection: 'pending',
   isPaused: true,
-  currentFile: undefined,
+  filename: undefined,
   playlist: [],
   eofReached: false,
   timePos: 0,
@@ -62,18 +51,7 @@ const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) =
   mute: false,
   speed: 1.0,
   percentPos: 0,
-  setConnection: (connection) => set({ connection }),
-  setIsPaused: (isPaused) => set({ isPaused }),
-  setCurrentFile: (currentFile) => set({ currentFile }),
-  setPlaylist: (playlist) => set({ playlist }),
-  setEofReached: (eofReached) => set({ eofReached }),
-  setTimePos: (timePos) => set({ timePos }),
-  setDuration: (duration) => set({ duration }),
-  setIsFullscreen: (isFullscreen) => set({ isFullscreen }),
-  setVolume: (volume) => set({ volume }),
-  setMute: (mute) => set({ mute }),
-  setSpeed: (speed) => set({ speed }),
-  setPercentPos: (percentPos) => set({ percentPos }),
+  updatePlayerState: (key, value) => set({ [key]: value }),
 }))
 
 const usePlayerStore = createSelectors(usePlayerStoreBase);

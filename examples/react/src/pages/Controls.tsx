@@ -12,10 +12,10 @@ const Controls = () => {
   const playlist = usePlayerStore.use.playlist();
   const timePos = usePlayerStore.use.timePos();
   const duration = usePlayerStore.use.duration();
-  const currentFile = usePlayerStore.use.currentFile();
+  const filename = usePlayerStore.use.filename();
   const eofReached = usePlayerStore.use.eofReached();
   const isFullscreen = usePlayerStore.use.isFullscreen();
-  const setIsFullscreen = usePlayerStore.use.setIsFullscreen();
+  const updatePlayerState = usePlayerStore.use.updatePlayerState();
 
   const [playlistVisible, setPlaylistVisible] = useState(false);
 
@@ -32,7 +32,7 @@ const Controls = () => {
 
   const toggleFullscreen = async () => {
     await getCurrentWindow().setFullscreen(!isFullscreen);
-    setIsFullscreen(!isFullscreen);
+    updatePlayerState('isFullscreen', !isFullscreen);
   };
 
   return (
@@ -53,7 +53,7 @@ const Controls = () => {
           title={isPaused ? 'Play' : 'Pause'}
           onClick={isPaused
             ? async () => {
-              if (currentFile && (duration - timePos < 0.5 || eofReached)) {
+              if (filename && (duration - timePos < 0.5 || eofReached)) {
                 await seek(0);
               };
               play();
