@@ -1,0 +1,10 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = [
+  "allow-init",
+  "allow-destroy",
+  "allow-command",
+  "allow-set-property",
+  "allow-get-property",
+  "allow-set-video-margin-ratio",
+]
