@@ -1,4 +1,4 @@
-import { MpvPlaylistItem } from 'tauri-plugin-mpv-api';
+
 import { create, StoreApi, UseBoundStore } from 'zustand'
 
 type WithSelectors<S> = S extends { getState: () => infer T }
@@ -18,6 +18,15 @@ const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
 }
 
 export type Connection = 'pending' | 'connected' | 'error';
+
+export interface MpvPlaylistItem {
+  filename: string;
+  playing?: boolean;
+  current?: boolean;
+  title?: string;
+  id: number;
+  'playlist-path'?: string;
+}
 
 export interface PlayerStoreState {
   connection: Connection;

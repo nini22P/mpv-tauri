@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map as JsonMap, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use libmpv2::events::{Event, PropertyData};
 use libmpv2::{mpv_end_file_reason, mpv_format, Format, GetData};
 
 use libmpv2_sys::{mpv_node, mpv_node_list};
+
+use crate::properties::*;
 
 pub struct MpvInstance {
     pub mpv: libmpv2::Mpv,
@@ -26,138 +29,41 @@ pub struct VideoMarginRatio {
     pub bottom: Option<f64>,
 }
 
-pub fn get_format_for_property(property: &str) -> Format {
-    match property {
-        "pause"
-        | "mute"
-        | "fullscreen"
-        | "loop"
-        | "eof-reached"
-        | "display-sync-active"
-        | "edition"
-        | "idle-active"
-        | "core-idle"
-        | "mixer-active"
-        | "playback-abort"
-        | "vo-configured"
-        | "focused"
-        | "deinterlace-active"
-        | "demuxer-cache-idle"
-        | "demuxer-via-network"
-        | "paused-for-cache"
-        | "seeking"
-        | "seekable"
-        | "partially-seekable"
-        | "ao-mute" => Format::Flag,
-        "playlist-pos"
-        | "playlist-pos-1"
-        | "playlist-current-pos"
-        | "playlist-playing-pos"
-        | "playlist-count"
-        | "pid"
-        | "remaining-file-loops"
-        | "remaining-ab-loops"
-        | "osd-width"
-        | "osd-height"
-        | "cursor-autohide"
-        | "dwidth"
-        | "dheight"
-        | "display-width"
-        | "display-height"
-        | "window-id"
-        | "file-size"
-        | "estimated-frame-count"
-        | "stream-pos"
-        | "stream-end"
-        | "decoder-frame-drop-count"
-        | "frame-drop-count"
-        | "vo-delayed-frame-count"
-        | "chapters"
-        | "cache-speed"
-        | "cache-buffering-state"
-        | "estimated-frame-number"
-        | "width"
-        | "height"
-        | "audio-bitrate"
-        | "video-bitrate"
-        | "current-edition"
-        | "editions"
-        | "chapter"
-        | "sub-bitrate"
-        | "mistimed-frame-count" => Format::Int64,
-        "volume"
-        | "speed"
-        | "percent-pos"
-        | "duration"
-        | "time-pos"
-        | "time-start"
-        | "time-remaining"
-        | "playtime-remaining"
-        | "audio-speed-correction"
-        | "video-speed-correction"
-        | "osd-par"
-        | "display-hidpi-scale"
-        | "display-fps"
-        | "avsync"
-        | "total-avsync-change"
-        | "playback-time"
-        | "demuxer-cache-duration"
-        | "demuxer-cache-time"
-        | "demuxer-start-time"
-        | "container-fps"
-        | "
-  estimated-vf-fps"
-        | "audio-pts"
-        | "ao-volume"
-        | "sub-start"
-        | "sub-end"
-        | "secondary-sub-start"
-        | "secondary-sub-end"
-        | "vsync-ratio"
-        | "current-window-scale"
-        | "estimated-display-fps"
-        | "vsync-jitter"
-        | "display-swapchain" => Format::Double,
-        "filename"
-        | "path"
-        | "stream-open-filename"
-        | "media-title"
-        | "file-format"
-        | "current-demuxer"
-        | "stream-path"
-        | "profile-name"
-        | "hwdec"
-        | "audio-device"
-        | "working-directory"
-        | "protocol-list"
-        | "demuxer-lavf-list"
-        | "input-key-list"
-        | "mpv-version"
-        | "mpv-configuration"
-        | "ffmpeg-version"
-        | "libass-version"
-        | "property-list"
-        | "platform"
-        | "clock"
-        | "display-names"
-        | "current-vo"
-        | "current-gpu-context"
-        | "current-clipboard-backend"
-        | "colormatrix"
-        | "colormatrix-input-range"
-        | "colormatrix-primaries"
-        | "current-ao"
-        | "hwdec-current"
-        | "hwdec-interop"
-        | "sub-ass-extradata"
-        | "chapter-metadata"
-        | "sub-text"
-        | "secondary-sub-text"
-        | "sub-text-ass"
-        | "playlist-path"
-        | "current-watch-later-dir" => Format::String,
-        _ => Format::String,
+static PROPERTY_FORMAT_MAP: LazyLock<HashMap<&'static str, Format>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+
+    for &prop in FLAG_PROPERTIES {
+        map.insert(prop.trim_end_matches('?'), Format::Flag);
     }
+    for &prop in INT64_PROPERTIES {
+        map.insert(prop.trim_end_matches('?'), Format::Int64);
+    }
+    for &prop in DOUBLE_PROPERTIES {
+        map.insert(prop.trim_end_matches('?'), Format::Double);
+    }
+    for &prop in STRING_PROPERTIES {
+        map.insert(prop.trim_end_matches('?'), Format::String);
+    }
+    for &prop in JSON_PROPERTIES {
+        map.insert(prop.trim_end_matches('?'), Format::String);
+    }
+
+    map
+});
+
+static JSON_PROPERTY_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    JSON_PROPERTIES
+        .iter()
+        .map(|p| p.trim_end_matches('?'))
+        .collect()
+});
+
+pub fn get_format_for_property(property: &str) -> Format {
+    *PROPERTY_FORMAT_MAP.get(property).unwrap_or(&Format::String)
+}
+
+pub fn is_json_property(property: &str) -> bool {
+    JSON_PROPERTY_SET.contains(property)
 }
 
 pub struct MpvJson(Value);
@@ -179,6 +85,7 @@ unsafe fn cstr_to_str<'a>(cstr: *const std::os::raw::c_char) -> crate::Result<&'
 
 unsafe fn convert_node_to_value(node: *const mpv_node) -> crate::Result<Value> {
     Ok(match (*node).format {
+        mpv_format::None => Value::Null,
         mpv_format::String | mpv_format::OsdString => {
             let s = cstr_to_str((*node).u.string)?;
             Value::String(s.to_string())
@@ -190,6 +97,10 @@ unsafe fn convert_node_to_value(node: *const mpv_node) -> crate::Result<Value> {
             serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number)
         }
         mpv_format::Array => {
+            if (*node).u.list.is_null() {
+                return Ok(Value::Array(Vec::new()));
+            }
+
             let list = (*node).u.list as *const mpv_node_list;
             let mut arr = Vec::with_capacity((*list).num as usize);
             for i in 0..(*list).num {
@@ -198,8 +109,11 @@ unsafe fn convert_node_to_value(node: *const mpv_node) -> crate::Result<Value> {
             Value::Array(arr)
         }
         mpv_format::Map => {
-            let list = (*node).u.list as *const mpv_node_list;
+            if (*node).u.list.is_null() {
+                return Ok(Value::Object(JsonMap::new()));
+            }
 
+            let list = (*node).u.list as *const mpv_node_list;
             let mut map = JsonMap::new();
             for i in 0..(*list).num {
                 let key = cstr_to_str(*(*list).keys.add(i as usize))?;
@@ -293,59 +207,20 @@ impl<'a> From<Event<'a>> for SerializableMpvEvent {
             Event::PropertyChange { name, change, .. } => {
                 let property_name = name.to_string();
 
-                match property_name.as_str() {
-                    "playlist"
-                    | "metadata"
-                    | "filtered-metadata"
-                    | "osd-dimensions"
-                    | "term-size"
-                    | "mouse-pos"
-                    | "touch-pos"
-                    | "tablet-pos"
-                    | "track-list"
-                    | "chapter-list"
-                    | "perf-info"
-                    | "audio-device-list"
-                    | "user-data"
-                    | "menu-data"
-                    | "decoder-list"
-                    | "encoder-list"
-                    | "profile-list"
-                    | "command-list"
-                    | "input-bindings"
-                    | "video-params"
-                    | "video-dec-params"
-                    | "video-out-params"
-                    | "video-target-params"
-                    | "video-frame-info"
-                    | "audio-params"
-                    | "vo-passes"
-                    | "clipboard"
-                    | "edition-list"
-                    | "demuxer-cache-state"
-                    | "audio-out-params"
-                    | "current-tracks"
-                    | "af"
-                    | "vf" => {
-                        if let PropertyData::Str(json_string) = change {
-                            let parsed_data =
-                                serde_json::from_str(json_string).unwrap_or(Value::Null);
-
-                            SerializableMpvEvent::PropertyChange {
-                                name: property_name,
-                                data: SerializablePropertyData::ParsedJson(parsed_data),
-                            }
-                        } else {
-                            SerializableMpvEvent::PropertyChange {
-                                name: property_name,
-                                data: change.into(),
-                            }
-                        }
+                let data = if is_json_property(&property_name) {
+                    if let PropertyData::Str(json_string) = change {
+                        let parsed = serde_json::from_str(json_string).unwrap_or(Value::Null);
+                        SerializablePropertyData::ParsedJson(parsed)
+                    } else {
+                        change.into()
                     }
-                    _ => SerializableMpvEvent::PropertyChange {
-                        name: property_name,
-                        data: change.into(),
-                    },
+                } else {
+                    change.into()
+                };
+
+                SerializableMpvEvent::PropertyChange {
+                    name: property_name,
+                    data,
                 }
             }
             Event::Shutdown => SerializableMpvEvent::Shutdown,
