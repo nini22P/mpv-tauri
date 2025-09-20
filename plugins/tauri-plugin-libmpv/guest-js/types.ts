@@ -1,36 +1,8 @@
+import { MpvPropertyTypes } from "./generated/mpv-properties";
+
 export interface MpvConfig {
   initialProperties?: Record<string, string | boolean | number>;
   observedProperties?: readonly string[];
-}
-
-/**
- * @see {@link https://mpv.io/manual/master/#command-interface-playlist}
- */
-export interface MpvPlaylistItem {
-  filename: string;
-  playing?: boolean;
-  current?: boolean;
-  title?: string;
-  id: number;
-  'playlist-path'?: string;
-}
-
-/**
- * @see {@link https://mpv.io/manual/master/#properties}
- */
-export interface MpvPropertyTypes {
-  'playlist': MpvPlaylistItem[];
-  'filename'?: string;
-  'pause': boolean;
-  'eof-reached'?: boolean;
-  'time-pos'?: number;
-  'duration'?: number;
-  'volume': number;
-  'mute': boolean;
-  'speed': number;
-  'percent-pos'?: number;
-  'playback-time'?: number;
-  'playtime-remaining'?: number;
 }
 
 export interface VideoMarginRatio {

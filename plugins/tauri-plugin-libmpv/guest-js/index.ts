@@ -10,6 +10,7 @@ import type {
 } from './types';
 
 export * from './types';
+export * from './generated/mpv-properties'
 
 export const COMMON_PROPERTIES = [
   'playlist',      // Playlist

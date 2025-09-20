@@ -64,7 +64,18 @@ const Controls = () => {
         >
           {isPaused ? '▶' : '⏸'}
         </button>
-        <button type="button" title={'Stop'} onClick={stop} >⏹</button>
+        <button
+          type="button"
+          title={'Stop'}
+          onClick={
+            () => {
+              stop();
+              updatePlayerState('timePos', 0);
+              updatePlayerState('duration', 0);
+              updatePlayerState('filename', undefined);
+            }
+          }
+        >⏹</button>
         <button type="button" title={'Previous'} onClick={playlistPrev} >⏮</button>
         <button type="button" title={'Next'} onClick={playlistNext} >⏭</button>
         <button
