@@ -55,7 +55,7 @@ body {
 ## Quick Start
 
 ```typescript
-import { destroyMpv, initializeMpv, MpvConfig, observeMpvProperties, sendMpvCommand } from "tauri-plugin-mpv-api";
+import { destroy, init, MpvConfig, observeMpvProperties, command } from "tauri-plugin-mpv-api";
 
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -75,14 +75,14 @@ const mpvConfig: MpvConfig = {
 // Initialize mpv
 try {
   console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
-  await initializeMpv(mpvConfig);
+  await init(mpvConfig);
   console.log('mpv initialization completed successfully!');
 } catch (error) {
   console.error('mpv initialization failed:', error);
 }
 
 // Destroy mpv when no longer needed
-await destroyMpv();
+await destroy();
 
 // Observe properties
 const unlisten = await observeMpvProperties(
@@ -108,7 +108,7 @@ const unlisten = await observeMpvProperties(
 unlisten();
 
 // Load and play a file
-await sendMpvCommand({ command: ['loadfile', '/path/to/video.mp4'] });
+await command({ command: ['loadfile', '/path/to/video.mp4'] });
 
 ```
 

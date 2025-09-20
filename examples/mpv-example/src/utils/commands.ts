@@ -1,43 +1,43 @@
-import { sendMpvCommand } from "tauri-plugin-mpv-api";
+import { command } from "tauri-plugin-mpv-api";
 
 export const loadFile = async (file: string) => {
-  await sendMpvCommand({ command: ['loadfile', file] });
+  await command({ command: ['loadfile', file] });
   await play();
 };
 
 export const playlistPlay = async (index: number) => {
-  await sendMpvCommand({ command: ['playlist-play-index', index] });
+  await command({ command: ['playlist-play-index', index] });
 };
 
 export const playlistNext = async () => {
-  await sendMpvCommand({ command: ['playlist-next'] });
+  await command({ command: ['playlist-next'] });
 };
 
 export const playlistPrev = async () => {
-  await sendMpvCommand({ command: ['playlist-prev'] });
+  await command({ command: ['playlist-prev'] });
 };
 
 export const play = async () => {
-  await sendMpvCommand({ command: ['set_property', 'pause', false] });
+  await command({ command: ['set_property', 'pause', false] });
 };
 
 export const pause = async () => {
-  await sendMpvCommand({ command: ['set_property', 'pause', true] });
+  await command({ command: ['set_property', 'pause', true] });
 };
 
 export const stop = async () => {
   await pause();
-  await sendMpvCommand({ command: ['stop'] });
+  await command({ command: ['stop'] });
 };
 
 export const seek = async (value: number) => {
-  await sendMpvCommand({ command: ['seek', value, 'absolute'] });
+  await command({ command: ['seek', value, 'absolute'] });
 };
 
 export const seekForward = async () => {
-  await sendMpvCommand({ command: ['seek', '10', 'relative'] });
+  await command({ command: ['seek', '10', 'relative'] });
 };
 
 export const seekBackward = async () => {
-  await sendMpvCommand({ command: ['seek', '-10', 'relative'] });
+  await command({ command: ['seek', '-10', 'relative'] });
 };
