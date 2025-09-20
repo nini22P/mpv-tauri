@@ -27,7 +27,7 @@ pub struct Mpv<R: Runtime> {
 }
 
 impl<R: Runtime> Mpv<R> {
-    pub fn initialize_mpv(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
+    pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app = self.app.clone();
 
         if let Some(webview_window) = app.get_webview_window(&window_label) {
@@ -70,7 +70,11 @@ impl<R: Runtime> Mpv<R> {
         Ok(window_label.to_string())
     }
 
-    pub fn send_mpv_command(
+    pub fn destroy(&self, window_label: &str) -> Result<()> {
+        process::kill_mpv_process(&self.app, window_label)
+    }
+
+    pub fn command(
         &self,
         mpv_command: &MpvCommand,
         window_label: &str,
@@ -132,9 +136,5 @@ impl<R: Runtime> Mpv<R> {
         }
 
         Ok(())
-    }
-
-    pub fn destroy_mpv(&self, window_label: &str) -> Result<()> {
-        process::kill_mpv_process(&self.app, window_label)
     }
 }

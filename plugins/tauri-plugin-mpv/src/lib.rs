@@ -37,9 +37,9 @@ impl<R: Runtime, T: Manager<R>> crate::MpvExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("mpv")
         .invoke_handler(tauri::generate_handler![
-            commands::initialize_mpv,
-            commands::destroy_mpv,
-            commands::send_mpv_command,
+            commands::init,
+            commands::destroy,
+            commands::command,
             commands::set_video_margin_ratio,
         ])
         .setup(|app, api| {

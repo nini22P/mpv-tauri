@@ -4,9 +4,9 @@ Default permissions for the plugin
 
 #### This default permission set includes the following:
 
-- `allow-initialize-mpv`
-- `allow-destroy-mpv`
-- `allow-send-mpv-command`
+- `allow-init`
+- `allow-destroy`
+- `allow-command`
 - `allow-set-video-margin-ratio`
 
 ## Permission Table
@@ -21,25 +21,12 @@ Default permissions for the plugin
 <tr>
 <td>
 
-`mpv:allow-destroy-mpv`
+`mpv:allow-command`
 
 </td>
 <td>
 
-Enables the destroy_mpv command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`mpv:deny-destroy-mpv`
-
-</td>
-<td>
-
-Denies the destroy_mpv command without any pre-configured scope.
+Enables the command command without any pre-configured scope.
 
 </td>
 </tr>
@@ -47,25 +34,12 @@ Denies the destroy_mpv command without any pre-configured scope.
 <tr>
 <td>
 
-`mpv:allow-initialize-mpv`
+`mpv:deny-command`
 
 </td>
 <td>
 
-Enables the initialize_mpv command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`mpv:deny-initialize-mpv`
-
-</td>
-<td>
-
-Denies the initialize_mpv command without any pre-configured scope.
+Denies the command command without any pre-configured scope.
 
 </td>
 </tr>
@@ -73,12 +47,12 @@ Denies the initialize_mpv command without any pre-configured scope.
 <tr>
 <td>
 
-`mpv:allow-send-mpv-command`
+`mpv:allow-destroy`
 
 </td>
 <td>
 
-Enables the send_mpv_command command without any pre-configured scope.
+Enables the destroy command without any pre-configured scope.
 
 </td>
 </tr>
@@ -86,12 +60,38 @@ Enables the send_mpv_command command without any pre-configured scope.
 <tr>
 <td>
 
-`mpv:deny-send-mpv-command`
+`mpv:deny-destroy`
 
 </td>
 <td>
 
-Denies the send_mpv_command command without any pre-configured scope.
+Denies the destroy command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mpv:allow-init`
+
+</td>
+<td>
+
+Enables the init command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mpv:deny-init`
+
+</td>
+<td>
+
+Denies the init command without any pre-configured scope.
 
 </td>
 </tr>

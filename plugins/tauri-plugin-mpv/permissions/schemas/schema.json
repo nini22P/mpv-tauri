@@ -295,40 +295,40 @@
       "type": "string",
       "oneOf": [
         {
-          "description": "Enables the destroy_mpv command without any pre-configured scope.",
+          "description": "Enables the command command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-destroy-mpv",
-          "markdownDescription": "Enables the destroy_mpv command without any pre-configured scope."
+          "const": "allow-command",
+          "markdownDescription": "Enables the command command without any pre-configured scope."
         },
         {
-          "description": "Denies the destroy_mpv command without any pre-configured scope.",
+          "description": "Denies the command command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-destroy-mpv",
-          "markdownDescription": "Denies the destroy_mpv command without any pre-configured scope."
+          "const": "deny-command",
+          "markdownDescription": "Denies the command command without any pre-configured scope."
         },
         {
-          "description": "Enables the initialize_mpv command without any pre-configured scope.",
+          "description": "Enables the destroy command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-initialize-mpv",
-          "markdownDescription": "Enables the initialize_mpv command without any pre-configured scope."
+          "const": "allow-destroy",
+          "markdownDescription": "Enables the destroy command without any pre-configured scope."
         },
         {
-          "description": "Denies the initialize_mpv command without any pre-configured scope.",
+          "description": "Denies the destroy command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-initialize-mpv",
-          "markdownDescription": "Denies the initialize_mpv command without any pre-configured scope."
+          "const": "deny-destroy",
+          "markdownDescription": "Denies the destroy command without any pre-configured scope."
         },
         {
-          "description": "Enables the send_mpv_command command without any pre-configured scope.",
+          "description": "Enables the init command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-send-mpv-command",
-          "markdownDescription": "Enables the send_mpv_command command without any pre-configured scope."
+          "const": "allow-init",
+          "markdownDescription": "Enables the init command without any pre-configured scope."
         },
         {
-          "description": "Denies the send_mpv_command command without any pre-configured scope.",
+          "description": "Denies the init command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-send-mpv-command",
-          "markdownDescription": "Denies the send_mpv_command command without any pre-configured scope."
+          "const": "deny-init",
+          "markdownDescription": "Denies the init command without any pre-configured scope."
         },
         {
           "description": "Enables the set_video_margin_ratio command without any pre-configured scope.",
@@ -343,10 +343,10 @@
           "markdownDescription": "Denies the set_video_margin_ratio command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-initialize-mpv`\n- `allow-destroy-mpv`\n- `allow-send-mpv-command`\n- `allow-set-video-margin-ratio`",
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-destroy`\n- `allow-command`\n- `allow-set-video-margin-ratio`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-initialize-mpv`\n- `allow-destroy-mpv`\n- `allow-send-mpv-command`\n- `allow-set-video-margin-ratio`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-destroy`\n- `allow-command`\n- `allow-set-video-margin-ratio`"
         }
       ]
     }
