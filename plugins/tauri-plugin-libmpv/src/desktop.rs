@@ -172,10 +172,14 @@ impl<R: Runtime> Mpv<R> {
     }
 
     pub fn destroy(&self, window_label: &str) -> Result<()> {
-        let app = self.app.clone();
-
         let instance_to_kill = {
-            let mut instances_lock = app.mpv().instances.lock().unwrap();
+            let mut instances_lock = match self.app.mpv().instances.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    warn!("Mutex for mpv instances was poisoned. Recovering.");
+                    poisoned.into_inner()
+                }
+            };
             instances_lock.remove(window_label)
         };
 
@@ -214,8 +218,7 @@ impl<R: Runtime> Mpv<R> {
     ) -> Result<()> {
         trace!("COMMAND '{}' '{:?}'", name, args);
 
-        let app = self.app.clone();
-        let instances_lock = match app.mpv().instances.lock() {
+        let instances_lock = match self.app.mpv().instances.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
                 warn!("Mutex was poisoned, recovering.");
@@ -266,8 +269,7 @@ impl<R: Runtime> Mpv<R> {
     ) -> crate::Result<()> {
         trace!("SET PROPERTY '{}' '{:?}'", name, value);
 
-        let app = self.app.clone();
-        let instances_lock = match app.mpv().instances.lock() {
+        let instances_lock = match self.app.mpv().instances.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
                 warn!("Mutex was poisoned, recovering.");
@@ -318,8 +320,7 @@ impl<R: Runtime> Mpv<R> {
         name: String,
         window_label: &str,
     ) -> crate::Result<serde_json::Value> {
-        let app = self.app.clone();
-        let instances_lock = match app.mpv().instances.lock() {
+        let instances_lock = match self.app.mpv().instances.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
                 warn!("Mutex was poisoned, recovering.");

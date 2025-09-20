@@ -29,7 +29,7 @@ pub(crate) async fn command<R: Runtime>(
 ) -> Result<()> {
     tauri::async_runtime::spawn_blocking(move || app.mpv().command(&name, &args, &window_label))
         .await
-        .unwrap()
+        .map_err(|e| crate::Error::Command(e.to_string()))?
 }
 
 #[command]
@@ -43,7 +43,7 @@ pub(crate) async fn set_property<R: Runtime>(
         app.mpv().set_property(&name, &value, &window_label)
     })
     .await
-    .unwrap()
+    .map_err(|e| crate::Error::SetProperty(e.to_string()))?
 }
 
 #[command]
@@ -54,7 +54,7 @@ pub(crate) async fn get_property<R: Runtime>(
 ) -> Result<Value> {
     tauri::async_runtime::spawn_blocking(move || app.mpv().get_property(name, &window_label))
         .await
-        .unwrap()
+        .map_err(|e| crate::Error::GetProperty(e.to_string()))?
 }
 
 #[command]
@@ -67,5 +67,5 @@ pub(crate) async fn set_video_margin_ratio<R: Runtime>(
         app.mpv().set_video_margin_ratio(ratio, &window_label)
     })
     .await
-    .unwrap()
+    .map_err(|e| crate::Error::Command(e.to_string()))?
 }
