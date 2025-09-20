@@ -22,9 +22,9 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: build example
-        run: npm run build:example
+        run: npm install -g pnpm && pnpm install && pnpm build:mpv-examples
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mpv-tauri-windows
-          path: examples/react/src-tauri/target/release/mpv-tauri.exe
+          name: tauri-plugin-mpv-example-windows
+          path: target/release/tauri-plugin-mpv-example.exe

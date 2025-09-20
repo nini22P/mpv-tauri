@@ -1,0 +1,106 @@
+.control {
+  background-color: #2f2f2f;
+  padding: 0.5rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: fit-content;
+  gap: 0.5rem;
+  height: 50px;
+}
+
+.control-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.control-buttons button {
+  background-color: #3a3a3a;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+  text-wrap: nowrap;
+}
+
+.control-buttons button:hover {
+  background-color: #4a4a4a;
+}
+
+.control-buttons button:active {
+  background-color: #555555;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  cursor: pointer;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.time {
+  text-wrap: nowrap;
+}
+
+.playlist {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 50px;
+  width: 100%;
+  height: calc(100% - 50px);
+  background-color: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  color: #f0f0f0;
+  text-wrap: nowrap;
+}
+
+.playlist-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem;
+}
+
+.playlist-item:hover,
+.active {
+  color: #2f2f2f;
+  background-color: rgba(255, 255, 255, 0.75);
+}

@@ -22,7 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-target
-*mpv.lib
-*libmpv-2.dll
