@@ -1,9 +1,4 @@
-const COMMANDS: &[&str] = &[
-    "initialize_mpv",
-    "destroy_mpv",
-    "send_mpv_command",
-    "set_video_margin_ratio",
-];
+const COMMANDS: &[&str] = &["init", "destroy", "command", "set_video_margin_ratio"];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

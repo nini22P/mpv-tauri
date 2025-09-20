@@ -87,7 +87,7 @@ export async function initializeMpv(
 
   windowLabel = windowLabel ?? getCurrentWindow().label;
 
-  return await invoke<string>('plugin:mpv|initialize_mpv', {
+  return await invoke<string>('plugin:mpv|init', {
     mpvConfig,
     windowLabel,
   });
@@ -111,7 +111,7 @@ export async function destroyMpv(windowLabel?: string): Promise<void> {
     windowLabel = getCurrentWindow().label;
   }
 
-  return await invoke('plugin:mpv|destroy_mpv', {
+  return await invoke('plugin:mpv|destroy', {
     windowLabel,
   });
 }
@@ -309,7 +309,7 @@ export async function listenMpvEvents(
  * console.log('Duration:', duration.data);
  * ```
  *
- * @param {MpvCommand} command - The command object to send to mpv. The `command` property is an array where the first element is the command name, followed by its parameters.
+ * @param {MpvCommand} mpvCommand - The command object to send to mpv. The `command` property is an array where the first element is the command name, followed by its parameters.
  * @param {string} [windowLabel] - Target window label, defaults to current window.
  * @returns {Promise<MpvCommandResponse>} A promise that resolves with the response from mpv.
  *
@@ -326,7 +326,7 @@ export async function sendMpvCommand(
     windowLabel = getCurrentWindow().label;
   }
 
-  return await invoke<MpvCommandResponse>('plugin:mpv|send_mpv_command', {
+  return await invoke<MpvCommandResponse>('plugin:mpv|command', {
     mpvCommand,
     windowLabel,
   });
