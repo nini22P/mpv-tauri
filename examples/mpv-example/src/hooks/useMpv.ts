@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { initializeMpv, observeMpvProperties, MpvConfig, destroyMpv } from 'tauri-plugin-mpv-api';
+import { observeMpvProperties, MpvConfig, destroy, init } from 'tauri-plugin-mpv-api';
 import usePlayerStore from '../store';
 
 const OBSERVED_PROPERTIES = [
@@ -36,7 +36,7 @@ const useMpv = () => {
 
       try {
         console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
-        await initializeMpv(mpvConfig);
+        await init(mpvConfig);
         console.log('mpv initialization completed successfully!');
         updatePlayerState('connection', 'connected');
       } catch (error) {
@@ -47,7 +47,7 @@ const useMpv = () => {
   }, [])
 
   useEffect(() => {
-    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroyMpv();
+    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroy();
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);

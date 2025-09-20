@@ -42,7 +42,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * 
  * @example
  * ```typescript
- * import { destroyMpv, initializeMpv, MpvConfig } from 'tauri-plugin-mpv-api';
+ * import { destroy, init, MpvConfig } from 'tauri-plugin-mpv-api';
  * 
  * // Properties to observe
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -60,13 +60,13 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * 
  * // Initialize mpv
  * try {
- *   await initializeMpv(mpvConfig);
+ *   await init(mpvConfig);
  * } catch (error) {
  *   console.error('Failed to initialize mpv:', error);
  * }
  * 
  * // Destroy mpv when no longer needed
- * await destroyMpv();
+ * await destroy();
  * ```
  *
  * @param {MpvConfig} [mpvConfig] - Initialization options.
@@ -75,7 +75,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  *
  * @throws {Error} Throws an error if mpv initialization fails (e.g., mpv executable not in PATH).
  */
-export async function initializeMpv(
+export async function init(
   mpvConfig?: MpvConfig,
   windowLabel?: string,
 ): Promise<string> {
@@ -94,19 +94,24 @@ export async function initializeMpv(
 }
 
 /**
+ * @deprecated Use `init()` instead. This function will be removed in a future version.
+ */
+export const initializeMpv = init;
+
+/**
  * Destroy mpv player.
  * 
  * @example
  * ```typescript
- * import { destroyMpv } from 'tauri-plugin-mpv-api';
+ * import { destroy } from 'tauri-plugin-mpv-api';
  * 
- * await destroyMpv();
+ * await destroy();
  * ```
  *
  * @param {string} [windowLabel] - Target window label, defaults to current window
  * @returns {Promise<void>} A promise that resolves when the operation completes.
  */
-export async function destroyMpv(windowLabel?: string): Promise<void> {
+export async function destroy(windowLabel?: string): Promise<void> {
   if (!windowLabel) {
     windowLabel = getCurrentWindow().label;
   }
@@ -115,6 +120,11 @@ export async function destroyMpv(windowLabel?: string): Promise<void> {
     windowLabel,
   });
 }
+
+/**
+ * @deprecated Use `destroy()` instead. This function will be removed in a future version.
+ */
+export const destroyMpv = destroy;
 
 /**
  * Listen to mpv property change events.
@@ -288,24 +298,24 @@ export async function listenMpvEvents(
  * 
  * @example
  * ```typescript
- * import { sendMpvCommand } from 'tauri-plugin-mpv-api';
+ * import { command } from 'tauri-plugin-mpv-api';
  * 
  * // Load file
- * await sendMpvCommand({ command: ['loadfile', '/path/to/video.mp4'] });
+ * await command({ command: ['loadfile', '/path/to/video.mp4'] });
  * 
  * // Play/pause
- * await sendMpvCommand({ command: ['set_property', 'pause', false] });
- * await sendMpvCommand({ command: ['set_property', 'pause', true] });
+ * await command({ command: ['set_property', 'pause', false] });
+ * await command({ command: ['set_property', 'pause', true] });
  * 
  * // Seek to position
- * await sendMpvCommand({ command: ['seek', 30, 'absolute'] });
- * await sendMpvCommand({ command: ['seek', 10, 'relative'] });
+ * await command({ command: ['seek', 30, 'absolute'] });
+ * await command({ command: ['seek', 10, 'relative'] });
  * 
  * // Set volume
- * await sendMpvCommand({ command: ['set_property', 'volume', 80] });
+ * await command({ command: ['set_property', 'volume', 80] });
  * 
  * // Get property
- * const duration = await sendMpvCommand({ command: ['get_property', 'duration'] });
+ * const duration = await command({ command: ['get_property', 'duration'] });
  * console.log('Duration:', duration.data);
  * ```
  *
@@ -317,7 +327,7 @@ export async function listenMpvEvents(
  *
  * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
  */
-export async function sendMpvCommand(
+export async function command(
   mpvCommand: MpvCommand,
   windowLabel?: string
 ): Promise<MpvCommandResponse> {
@@ -331,6 +341,11 @@ export async function sendMpvCommand(
     windowLabel,
   });
 }
+
+/**
+ * @deprecated Use `command()` instead. This function will be removed in a future version.
+ */
+export const sendMpvCommand = command;
 
 /**
  * Set video margin ratio
