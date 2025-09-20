@@ -192,6 +192,8 @@ export async function observeProperties<T extends ReadonlyArray<string>>(
  * @param {function} callback - Function to call when mpv events are received
  * @param {string} [windowLabel] - Target window label, defaults to current window
  * @returns {Promise<UnlistenFn>} Function to call to stop listening
+ * 
+ * @see {@link https://mpv.io/manual/master/#properties} for a full list of properties.
  *
  */
 export async function observeProperties(
@@ -310,7 +312,6 @@ export async function listenEvents(
  *
  * @throws {Error} Throws an error if the command fails or mpv returns an error status.
  *
- * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
  */
 export async function command(
   name: string,

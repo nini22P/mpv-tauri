@@ -1,12 +1,12 @@
 # Tauri Plugin libmpv
 
-A Tauri plugin to embed the mpv window in your app.
+A Tauri plugin to embed the mpv player in your app via libmpv.
 
 ## Installation
 
 ### Prerequisites
 
-- Download the libmpv2 library and place it in the root of your project. Rename `libmpv.dll.a` to `mpv.lib`.
+- Download the libmpv2 library and place it in `src-tauri`.
 - Tauri v2.x
 - Node.js 18+
 

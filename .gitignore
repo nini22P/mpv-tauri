@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 
 target
-mpv.lib
+*mpv.lib
+*libmpv-2.dll
