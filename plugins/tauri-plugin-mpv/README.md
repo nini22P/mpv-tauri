@@ -108,7 +108,19 @@ const unlisten = await observeMpvProperties(
 unlisten();
 
 // Load and play a file
-await command({ command: ['loadfile', '/path/to/video.mp4'] });
+await command('loadfile', ['/path/to/video.mp4']);
+
+// Or if you need to provide a custom request_id, use the original JSON IPC object structure.
+await command({ command: ['loadfile', '/path/to/video.mp4'], request_id: 999 });
+
+// Stop
+await command('stop');
+
+// Seek 10 seconds forward
+await command('seek', [10, 'relative']);
+
+// Set volume to 50%
+await command('set_property', ['volume', 50]);
 
 ```
 

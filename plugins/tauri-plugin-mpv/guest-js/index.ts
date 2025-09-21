@@ -290,50 +290,119 @@ export async function listenMpvEvents(
 }
 
 /**
- * Send mpv command
- * 
- * @param {MpvCommand} mpvCommand - The command object to send to mpv.
- * @param {string} [windowLabel] - Target window label, defaults to current window.
- * @returns {Promise<MpvCommandResponse>} A promise that resolves with the response from mpv.
- * @throws {Error} Throws an error if the command fails or mpv returns an error status.
- * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
- * 
+ * Sends a command to mpv and returns only the `data` portion of the response.
+ * This is a convenient shortcut for commands where you only need the return value.
+ *
+ * @param name The name of the command to execute.
+ * @param args (Optional) An array of arguments for the command.
+ * @param windowLabel (Optional) The label of the Tauri window to target. Defaults to the current window.
+ * @returns A promise that resolves with the data returned by mpv.
+ * @throws {Error} Throws an error if the mpv command fails.
+ *
  * @example
  * ```typescript
  * import { command } from 'tauri-plugin-mpv-api';
- * 
- * // Load file
- * await command({ command: ['loadfile', '/path/to/video.mp4'] });
- * 
- * // Play/pause
- * await command({ command: ['set_property', 'pause', false] });
- * await command({ command: ['set_property', 'pause', true] });
- * 
- * // Seek to position
- * await command({ command: ['seek', 30, 'absolute'] });
- * await command({ command: ['seek', 10, 'relative'] });
- * 
- * // Set volume
- * await command({ command: ['set_property', 'volume', 80] });
- * 
- * // Get property
- * const duration = await command({ command: ['get_property', 'duration'] });
- * console.log('Duration:', duration.data);
+ *
+ * // Get the duration property
+ * const duration = await command('get_property', ['duration']);
+ * console.log('Duration is:', duration);
+ *
+ * // Seek 10 seconds forward (args are optional)
+ * await command('seek', [10, 'relative']);
+ *
+ * // Pause the player (no args needed)
+ * await command('cycle', ['pause']);
+ * ```
+ */
+export async function command(
+  name: string,
+  args?: unknown[],
+  windowLabel?: string
+): Promise<unknown>;
+
+/**
+ * Sends a command to mpv without arguments and returns the `data` portion of the response.
+ *
+ * @param name The name of the command to execute.
+ * @param windowLabel (Optional) The label of the Tauri window to target. Defaults to the current window.
+ * @returns A promise that resolves with the data returned by mpv.
+ * @throws {Error} Throws an error if the mpv command fails.
+ */
+export async function command(
+  name: string,
+  windowLabel?: string
+): Promise<unknown>;
+
+/**
+ * Sends a command to mpv using original JSON IPC object structure.
+ *
+ * @param mpvCommand The command object to send to mpv.
+ * @param windowLabel (Optional) The label of the Tauri window to target. Defaults to the current window.
+ * @returns A promise that resolves with the full response object from mpv.
+ * @throws {Error} Throws an error if the command fails or mpv returns an error status.
+ * @see {@link https://mpv.io/manual/master/#json-ipc} for a full list of commands.
+ *
+ * @example
+ * ```typescript
+ * import { command } from 'tauri-plugin-mpv-api';
+ *
+ * // Load a file and check the full response
+ * const response = await command({ command: ['loadfile', '/path/to/video.mp4'] });
+ * if (response.error === 'success') {
+ * console.log('File loaded successfully');
+ * }
+ *
+ * // Seek with a custom request_id for tracking
+ * const seekResponse = await command({ command: ['seek', 10, 'relative'], request_id: 999 });
+ * console.log('Seek command with ID', seekResponse.request_id, 'was successful.');
  * ```
  */
 export async function command(
   mpvCommand: MpvCommand,
   windowLabel?: string
-): Promise<MpvCommandResponse> {
+): Promise<MpvCommandResponse>;
 
-  if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+export async function command(
+  arg1: MpvCommand | string,
+  arg2?: unknown[] | string,
+  arg3?: string
+): Promise<MpvCommandResponse | unknown> {
+  let finalMpvCommand: MpvCommand;
+  let finalWindowLabel: string | undefined;
+  let isShortcut = false;
+
+  if (typeof arg1 === 'string') {
+    isShortcut = true;
+    const name = arg1;
+    const args = Array.isArray(arg2) ? arg2 : [];
+    finalWindowLabel = Array.isArray(arg2) ? arg3 : arg2;
+
+    finalMpvCommand = {
+      command: [name, ...args],
+    };
+  } else {
+    isShortcut = false;
+    finalMpvCommand = arg1;
+    finalWindowLabel = arg2 as string;
   }
 
-  return await invoke<MpvCommandResponse>('plugin:mpv|command', {
-    mpvCommand,
-    windowLabel,
+  if (!finalWindowLabel) {
+    finalWindowLabel = getCurrentWindow().label;
+  }
+
+  const response = await invoke<MpvCommandResponse>('plugin:mpv|command', {
+    mpvCommand: finalMpvCommand,
+    windowLabel: finalWindowLabel,
   });
+
+  if (isShortcut) {
+    if (response.error !== 'success') {
+      throw new Error(`mpv command failed: ${response.error}`);
+    }
+    return response.data;
+  } else {
+    return response;
+  }
 }
 
 /**
