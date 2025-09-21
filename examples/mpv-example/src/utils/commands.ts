@@ -1,4 +1,4 @@
-import { command } from "tauri-plugin-mpv-api";
+import { command, setProperty } from "tauri-plugin-mpv-api";
 
 export const loadFile = async (file: string) => {
   await command('loadfile', [file]);
@@ -18,11 +18,11 @@ export const playlistPrev = async () => {
 };
 
 export const play = async () => {
-  await command('set_property', ['pause', false]);
+  await setProperty('pause', false);
 };
 
 export const pause = async () => {
-  await command('set_property', ['pause', true]);
+  await setProperty('pause', true);
 };
 
 export const stop = async () => {

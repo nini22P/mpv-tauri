@@ -55,7 +55,15 @@ body {
 ## Quick Start
 
 ```typescript
-import { destroy, init, MpvConfig, observeMpvProperties, command } from "tauri-plugin-mpv-api";
+import {
+  init,
+  destroy,
+  command,
+  setProperty,
+  getProperty,
+  observeMpvProperties,
+  MpvConfig
+} from "tauri-plugin-mpv-api";
 
 // Properties to observe
 const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -72,17 +80,12 @@ const mpvConfig: MpvConfig = {
   ipcTimeoutMs: 2000,
 };
 
-// Initialize mpv
 try {
-  console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
   await init(mpvConfig);
   console.log('mpv initialization completed successfully!');
 } catch (error) {
   console.error('mpv initialization failed:', error);
 }
-
-// Destroy mpv when no longer needed
-await destroy();
 
 // Observe properties
 const unlisten = await observeMpvProperties(
@@ -107,20 +110,26 @@ const unlisten = await observeMpvProperties(
 // Unlisten when no longer needed
 unlisten();
 
-// Load and play a file
+// Use the simple shortcut for most commands
 await command('loadfile', ['/path/to/video.mp4']);
+await command('seek', [10, 'relative']); // Seek 10 seconds forward
 
-// Or if you need to provide a custom request_id, use the original JSON IPC object structure.
-await command({ command: ['loadfile', '/path/to/video.mp4'], request_id: 999 });
+// Use the full object format if you need to provide a custom request_id
+await command({ command: ['stop'], request_id: 123 });
 
-// Stop
-await command('stop');
+// `setProperty` is type-safe for known properties
+await setProperty('volume', 75);
+await setProperty('pause', false);
 
-// Seek 10 seconds forward
-await command('seek', [10, 'relative']);
+// `getProperty` returns a typed value for known properties
+const volume = await getProperty('volume'); // `volume` is a number
+console.log('Current volume:', volume);
 
-// Set volume to 50%
-await command('set_property', ['volume', 50]);
+// You can also explicitly set the type for unknown or custom properties
+const customProp = await getProperty<string>('my-custom-property');
+
+// Destroy mpv when your app closes or the player is no longer needed
+await destroy();
 
 ```
 
