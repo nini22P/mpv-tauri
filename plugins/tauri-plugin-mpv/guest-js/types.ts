@@ -49,7 +49,7 @@ export interface MpvCommand {
    * // Seeks 10 seconds forward
    * ['seek', 10, 'relative']
    */
-  command: (string | boolean | number)[];
+  command: unknown[];
 
   /**
    * A unique identifier for the command.
