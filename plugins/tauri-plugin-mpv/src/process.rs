@@ -142,7 +142,10 @@ pub fn init_mpv_process<R: Runtime>(
             let app_clone = app.clone();
             let process_id = child.id();
 
-            let instance = MpvInstance { process: child };
+            let instance = MpvInstance {
+                process: child,
+                ipc_timeout: ipc_timeout,
+            };
             instances_lock.insert(window_label.to_string(), instance);
 
             std::thread::spawn(move || {

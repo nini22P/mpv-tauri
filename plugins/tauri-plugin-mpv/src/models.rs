@@ -4,6 +4,7 @@ use std::{collections::HashMap, process::Child};
 
 pub struct MpvInstance {
     pub process: Child,
+    pub ipc_timeout: std::time::Duration,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
