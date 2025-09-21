@@ -49,7 +49,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * 
  * @example
  * ```typescript
- * import { destroy, init, MpvConfig } from 'tauri-plugin-mpv-api';
+ * import { init, destroy, MpvConfig } from 'tauri-plugin-mpv-api';
  * 
  * // Properties to observe
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
@@ -114,9 +114,8 @@ export const initializeMpv = init;
  * ```
  */
 export async function destroy(windowLabel?: string): Promise<void> {
-  if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
-  }
+
+  windowLabel = windowLabel ?? getCurrentWindow().label;
 
   return await invoke('plugin:mpv|destroy', {
     windowLabel,
@@ -285,9 +284,7 @@ export async function listenMpvEvents(
   windowLabel?: string
 ): Promise<UnlistenFn> {
 
-  if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
-  }
+  windowLabel = windowLabel ?? getCurrentWindow().label;
 
   const eventName = `mpv-event-${windowLabel}`;
 
@@ -392,9 +389,7 @@ export async function command(
     finalWindowLabel = arg2 as string;
   }
 
-  if (!finalWindowLabel) {
-    finalWindowLabel = getCurrentWindow().label;
-  }
+  finalWindowLabel = finalWindowLabel ?? getCurrentWindow().label;
 
   const response = await invoke<MpvCommandResponse>('plugin:mpv|command', {
     mpvCommand: finalMpvCommand,
@@ -514,10 +509,7 @@ export async function setProperty<
  */
 export async function setVideoMarginRatio(ratio: VideoMarginRatio, windowLabel?: string): Promise<void> {
 
-  if (!windowLabel) {
-    const currentWindow = getCurrentWindow();
-    windowLabel = currentWindow.label;
-  }
+  windowLabel = windowLabel ?? getCurrentWindow().label;
 
   return await invoke<void>('plugin:mpv|set_video_margin_ratio', {
     ratio,

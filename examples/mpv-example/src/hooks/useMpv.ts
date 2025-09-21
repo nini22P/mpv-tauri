@@ -35,7 +35,6 @@ const useMpv = () => {
       };
 
       try {
-        console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
         await init(mpvConfig);
         console.log('mpv initialization completed successfully!');
         updatePlayerState('connection', 'connected');
