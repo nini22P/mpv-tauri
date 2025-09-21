@@ -6,7 +6,7 @@ use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::{ipc, models::*, process};
+use crate::{ipc, models::*, process, MpvExt};
 use crate::{MpvInstance, Result};
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
@@ -79,7 +79,11 @@ impl<R: Runtime> Mpv<R> {
         mpv_command: MpvCommand,
         window_label: &str,
     ) -> Result<MpvCommandResponse> {
-        ipc::send_command(mpv_command, window_label)
+        let ipc_timeout = {
+            let instances_lock = self.app.mpv().instances.lock().unwrap();
+            instances_lock.get(window_label).unwrap().ipc_timeout
+        };
+        ipc::send_command(mpv_command, window_label, ipc_timeout)
     }
 
     pub fn set_video_margin_ratio(
@@ -87,6 +91,10 @@ impl<R: Runtime> Mpv<R> {
         ratio: VideoMarginRatio,
         window_label: &str,
     ) -> Result<()> {
+        let ipc_timeout = {
+            let instances_lock = self.app.mpv().instances.lock().unwrap();
+            instances_lock.get(window_label).unwrap().ipc_timeout
+        };
         if let Some(left) = ratio.left {
             let mpv_command = MpvCommand {
                 command: vec![
@@ -96,7 +104,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label, ipc_timeout)?;
         }
 
         if let Some(right) = ratio.right {
@@ -108,7 +116,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label, ipc_timeout)?;
         }
 
         if let Some(top) = ratio.top {
@@ -120,7 +128,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label, ipc_timeout)?;
         }
 
         if let Some(bottom) = ratio.bottom {
@@ -132,7 +140,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label, ipc_timeout)?;
         }
 
         Ok(())

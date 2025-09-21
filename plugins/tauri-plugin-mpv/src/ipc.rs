@@ -1,5 +1,6 @@
 use std::io::{BufRead, BufReader, Read, Write};
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::{Duration, Instant}; // <--- 引入时间模块
 
 #[cfg(windows)]
 use std::fs::OpenOptions;
@@ -23,7 +24,11 @@ pub fn get_ipc_pipe(window_label: &str) -> String {
     format!("{}_{}_{}", IPC_PIPE_BASE, std::process::id(), window_label)
 }
 
-pub fn send_command(mut mpv_command: MpvCommand, window_label: &str) -> Result<MpvCommandResponse> {
+pub fn send_command(
+    mut mpv_command: MpvCommand,
+    window_label: &str,
+    ipc_timeout: Duration,
+) -> Result<MpvCommandResponse> {
     if mpv_command.request_id.is_none() {
         mpv_command.request_id = Some(NEXT_REQUEST_ID.fetch_add(1, Ordering::SeqCst));
     }
@@ -46,7 +51,8 @@ pub fn send_command(mut mpv_command: MpvCommand, window_label: &str) -> Result<M
                 return Err(crate::Error::IpcError(err_msg));
             }
         };
-        process_mpv_command(pipe, mpv_command, window_label)
+
+        process_mpv_command(pipe, mpv_command, window_label, ipc_timeout)
     }
 
     #[cfg(unix)]
@@ -60,7 +66,7 @@ pub fn send_command(mut mpv_command: MpvCommand, window_label: &str) -> Result<M
             }
         };
 
-        process_mpv_command(stream, mpv_command, window_label)
+        process_mpv_command(stream, mpv_command, window_label, ipc_timeout)
     }
 }
 
@@ -68,6 +74,7 @@ fn process_mpv_command<S: Read + Write>(
     mut stream: S,
     mpv_command: MpvCommand,
     window_label: &str,
+    ipc_timeout: Duration,
 ) -> Result<MpvCommandResponse> {
     let expected_request_id = mpv_command.request_id.unwrap();
 
@@ -99,7 +106,18 @@ fn process_mpv_command<S: Read + Write>(
 
     let mut reader = BufReader::new(stream);
 
+    let start_time = Instant::now();
+
     loop {
+        if start_time.elapsed() > ipc_timeout {
+            let err_msg = format!(
+                "Timeout: Did not receive a response for request_id {} within {:?}",
+                expected_request_id, ipc_timeout
+            );
+            error!("For window '{}': {}", window_label, err_msg);
+            return Err(crate::Error::IpcError(err_msg));
+        }
+
         let mut response_string = String::new();
 
         if let Err(e) = reader.read_line(&mut response_string) {
