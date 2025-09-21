@@ -76,7 +76,7 @@ impl<R: Runtime> Mpv<R> {
 
     pub fn command(
         &self,
-        mpv_command: &MpvCommand,
+        mpv_command: MpvCommand,
         window_label: &str,
     ) -> Result<MpvCommandResponse> {
         ipc::send_command(mpv_command, window_label)
@@ -96,7 +96,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(&mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label)?;
         }
 
         if let Some(right) = ratio.right {
@@ -108,7 +108,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(&mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label)?;
         }
 
         if let Some(top) = ratio.top {
@@ -120,7 +120,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(&mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label)?;
         }
 
         if let Some(bottom) = ratio.bottom {
@@ -132,7 +132,7 @@ impl<R: Runtime> Mpv<R> {
                 ],
                 request_id: None,
             };
-            ipc::send_command(&mpv_command, window_label)?;
+            ipc::send_command(mpv_command, window_label)?;
         }
 
         Ok(())

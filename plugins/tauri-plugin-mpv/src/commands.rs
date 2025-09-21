@@ -22,7 +22,7 @@ pub(crate) async fn command<R: Runtime>(
     mpv_command: MpvCommand,
     window_label: String,
 ) -> Result<MpvCommandResponse> {
-    tauri::async_runtime::spawn_blocking(move || app.mpv().command(&mpv_command, &window_label))
+    tauri::async_runtime::spawn_blocking(move || app.mpv().command(mpv_command, &window_label))
         .await
         .unwrap()
 }
