@@ -9,6 +9,7 @@ import type {
   MpvEvent,
   MpvCommandResponse,
   MpvPropertyEventFor,
+  MpvPropertyValue,
 } from './types';
 
 export * from './types';
@@ -36,6 +37,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
   ipcTimeoutMs: 2000,
   showMpvOutput: false,
 };
+
 
 /**
  * Initialize mpv player.
@@ -92,6 +94,7 @@ export async function init(
   });
 }
 
+
 /**
  * @deprecated Use `init()` instead. This function will be removed in a future version.
  */
@@ -119,6 +122,7 @@ export async function destroy(windowLabel?: string): Promise<void> {
     windowLabel,
   });
 }
+
 
 /**
  * @deprecated Use `destroy()` instead. This function will be removed in a future version.
@@ -239,6 +243,7 @@ export async function observeMpvProperties(
   );
 }
 
+
 /**
  * Listen to all mpv events.
  * 
@@ -288,6 +293,7 @@ export async function listenMpvEvents(
 
   return await listen<MpvEvent>(eventName, (event) => callback(event.payload));
 }
+
 
 /**
  * Sends a command to mpv and returns only the `data` portion of the response.
@@ -410,6 +416,70 @@ export async function command(
  */
 export const sendMpvCommand = command;
 
+
+/**
+ * Gets the value of an mpv property.
+ *
+ * @param name The name of the property to get.
+ * @param windowLabel (Optional) The label of the Tauri window to target.
+ * @returns A promise that resolves with the typed property value.
+ * @throws {Error} Throws an error if the command fails.
+ *
+ * @example
+ * ```typescript
+ * import { getProperty } from 'tauri-plugin-mpv-api';
+ *
+ * // Get volume
+ * const volume = await getProperty('volume');
+ *
+ * // `custom` is now treated as `string`
+ * const custom = await getProperty<string>('my-custom-property');
+ * ```
+ */
+export async function getProperty<
+  T = never,
+  K extends string = string
+>(
+  name: K,
+  windowLabel?: string
+): Promise<[T] extends [never] ? MpvPropertyValue<K> : T> {
+  const value = await command('get_property', [name], windowLabel);
+  return value as [T] extends [never] ? MpvPropertyValue<K> : T;
+}
+
+
+/**
+ * Sets the value of an mpv property.
+ *
+ * @param name The name of the property to set.
+ * @param value The value to set. Must match the property's type if it is known.
+ * @param windowLabel (Optional) The label of the Tauri window to target.
+ * @returns A promise that resolves when the property has been set.
+ * @throws {Error} Throws an error if the command fails.
+ *
+ * @example
+ * ```typescript
+ * import { setProperty } from 'tauri-plugin-mpv-api';
+ *
+ * // Set volume
+ * await setProperty('volume', 80);
+ *
+ * // Explicitly provide a type for a custom or unknown property
+ * await setProperty<string>('my-custom-property', 'some-value');
+ * ```
+ */
+export async function setProperty<
+  T = never,
+  K extends string = string
+>(
+  name: K,
+  value: [T] extends [never] ? MpvPropertyValue<K> : T,
+  windowLabel?: string
+): Promise<void> {
+  await command('set_property', [name, value], windowLabel);
+}
+
+
 /**
  * Set video margin ratio
  * 
@@ -430,7 +500,7 @@ export const sendMpvCommand = command;
  *   left: 0.05,
  *   right: 0.05,
  *   top: 0.1,
- *   bottom: 0.15
+ *   bottom: 0.15,
  * });
  * 
  * // Reset margins (remove all margins)
@@ -438,7 +508,7 @@ export const sendMpvCommand = command;
  *   left: 0,
  *   right: 0,
  *   top: 0,
- *   bottom: 0
+ *   bottom: 0,
  * });
  * ```
  */

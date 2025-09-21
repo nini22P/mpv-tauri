@@ -89,13 +89,6 @@ export interface MpvCommandResponse {
   request_id: number;
 }
 
-export interface VideoMarginRatio {
-  left?: number;
-  right?: number;
-  top?: number;
-  bottom?: number;
-}
-
 /**
  * @see {@link https://mpv.io/manual/master/#list-of-events}
  */
@@ -140,3 +133,14 @@ export type MpvPropertyEventFor<K extends string> = {
   ? { name: P; data: MpvPropertyTypes[P] }
   : { name: P; data: unknown };
 }[K];
+
+export type MpvPropertyValue<K extends string> = K extends keyof MpvPropertyTypes
+  ? MpvPropertyTypes[K]
+  : unknown;
+
+export interface VideoMarginRatio {
+  left?: number;
+  right?: number;
+  top?: number;
+  bottom?: number;
+}
