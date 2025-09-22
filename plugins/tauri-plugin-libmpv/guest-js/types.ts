@@ -12,16 +12,11 @@ export type MpvObservableFormat = Exclude<MpvFormat, 'node'>;
 
 export type MpvObservableProperty = readonly [string, MpvObservableFormat];
 
-
 export interface MpvConfig {
   initialProperties?: Record<string, string | boolean | number>;
   observedProperties?: readonly MpvObservableProperty[];
 }
 
-// A helper type representing the Rust `SerializablePropertyData` enum
-export type MpvSerializablePropertyData = string | number | boolean;
-
-// The full list of event types, matching the Rust enum
 export type MpvEventType =
   | 'shutdown'
   | 'log-message'
@@ -55,7 +50,7 @@ export interface MpvLogMessageEvent extends MpvEventBase<'log-message'> {
 
 export interface MpvGetPropertyReplyEvent extends MpvEventBase<'get-property-reply'> {
   name: string;
-  result: MpvSerializablePropertyData;
+  result: string | boolean | number | unknown;
   reply_userdata: number;
 }
 
@@ -91,15 +86,15 @@ export interface MpvPropertyChangeEvent<TName extends string, TValue>
   reply_userdata: number;
 }
 
-export interface MpvQueueOverflowEvent extends MpvEventBase<'queue-overflow'> { }
-export interface MpvDeprecatedEvent extends MpvEventBase<'deprecated'> { }
-
 export type MpvEventFromProperties<T extends MpvObservableProperty> = T extends readonly [
   infer TName extends string,
   infer TFormat extends MpvObservableFormat
 ]
   ? MpvPropertyChangeEvent<TName, MpvFormatToType[TFormat]>
   : never;
+
+export interface MpvQueueOverflowEvent extends MpvEventBase<'queue-overflow'> { }
+export interface MpvDeprecatedEvent extends MpvEventBase<'deprecated'> { }
 
 export type MpvEvent =
   | MpvShutdownEvent
