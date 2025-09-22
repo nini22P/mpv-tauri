@@ -1,5 +1,5 @@
 {
-  "name": "tauri-mpv-workspace",
+  "name": "mpv-tauri",
   "private": true,
   "scripts": {
     "build:plugins": "pnpm --filter \"./plugins/*\" build",

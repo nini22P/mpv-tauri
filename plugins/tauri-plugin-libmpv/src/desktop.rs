@@ -231,7 +231,11 @@ impl<R: Runtime> Mpv<R> {
         args: &Vec<serde_json::Value>,
         window_label: &str,
     ) -> Result<()> {
-        trace!("COMMAND '{}' '{:?}'", name, args);
+        if args.is_empty() {
+            trace!("COMMAND '{}'", name);
+        } else {
+            trace!("COMMAND '{}' '{:?}'", name, args);
+        }
 
         let instances_lock = match self.app.mpv().instances.lock() {
             Ok(guard) => guard,

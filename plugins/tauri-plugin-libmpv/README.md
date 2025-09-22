@@ -50,19 +50,24 @@ body {
 ## Quick Start
 
 ```typescript
-import { destroy, init, MpvConfig, observeMpvProperties, command } from "tauri-plugin-libmpv-api";
+import { destroy, init, MpvConfig, observeProperties, command, MpvObservableProperty } from 'tauri-plugin-libmpv-api';
 
 // Properties to observe
-const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
+const OBSERVED_PROPERTIES = [
+  ['pause', 'flag'],
+  ['time-pos', 'double'],
+  ['duration', 'double'],
+  ['filename', 'string'],
+] as const satisfies MpvObservableProperty[];
 
 // mpv configuration
 const mpvConfig: MpvConfig = {
   initialProperties: {
-    "vo": "gpu-next",
-    "hwdec": "auto-safe",
-    "keep-open": "yes",
-    "force-window": "yes",
-    "pause": "yes",
+    'vo': 'gpu-next',
+    'hwdec': 'auto-safe',
+    'keep-open': 'yes',
+    'force-window': 'yes',
+    'pause': 'yes',
   },
   observedProperties: OBSERVED_PROPERTIES,
 };
@@ -76,25 +81,22 @@ try {
   console.error('mpv initialization failed:', error);
 }
 
-// Destroy mpv when no longer needed
-await destroy();
-
 // Observe properties
-const unlisten = await observeMpvProperties(
+const unlisten = await observeProperties(
   OBSERVED_PROPERTIES,
-  ({ name, data }) => {
+  ({ name, change }) => {
     switch (name) {
       case 'pause':
-        console.log('Playback paused state:', data);
+        console.log('Playback paused state:', change);
         break;
       case 'time-pos':
-        console.log('Current time position:', data);
+        console.log('Current time position:', change);
         break;
       case 'duration':
-        console.log('Duration:', data);
+        console.log('Duration:', change);
         break;
       case 'filename':
-        console.log('Current playing file:', data);
+        console.log('Current playing file:', change);
         break;
     }
   });
@@ -104,6 +106,9 @@ unlisten();
 
 // Load and play a file
 await command('loadfile', ['/path/to/video.mp4']);
+
+// Destroy mpv when no longer needed
+await destroy();
 
 ```
 

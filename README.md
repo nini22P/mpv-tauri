@@ -1,4 +1,4 @@
-# tauri-plugin-mpv
+# mpv-tauri
 
 A Tauri plugin to embed the mpv player in your app via JSON IPC or libmpv.
 
