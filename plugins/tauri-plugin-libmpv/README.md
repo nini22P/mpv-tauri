@@ -1,7 +1,3 @@
->[!IMPORTANT]
->This plugin is not planned for publication as it does not yet strike the right balance between versatility, ease of use, and reliability.
->We are postponing publication until a better solution is found.
-
 # Tauri Plugin libmpv
 
 A Tauri plugin to embed the mpv player in your app via libmpv.

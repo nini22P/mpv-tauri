@@ -25,6 +25,8 @@ pub enum Error {
     SetProperty(String),
     #[error("Get Property Error: {0}")]
     GetProperty(String),
+    #[error("Invalid format string provided: {0}")]
+    Format(String),
 }
 
 impl From<libmpv2::Error> for Error {

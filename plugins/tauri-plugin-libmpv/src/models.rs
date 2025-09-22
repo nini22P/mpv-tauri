@@ -1,14 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Map as JsonMap, Value};
-use std::collections::{HashMap, HashSet};
-use std::sync::LazyLock;
-
-use libmpv2::events::{Event, PropertyData};
-use libmpv2::{mpv_end_file_reason, mpv_format, Format, GetData};
-
-use libmpv2_sys::{mpv_node, mpv_node_list};
-
-use crate::properties::*;
+use std::collections::HashMap;
 
 pub struct MpvInstance {
     pub mpv: libmpv2::Mpv,
@@ -17,59 +8,14 @@ pub struct MpvInstance {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MpvConfig {
-    pub initial_properties: Option<HashMap<String, Value>>,
-    pub observed_properties: Option<Vec<String>>,
+    pub initial_properties: Option<HashMap<String, serde_json::Value>>,
+    pub observed_properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VideoMarginRatio {
-    pub left: Option<f64>,
-    pub right: Option<f64>,
-    pub top: Option<f64>,
-    pub bottom: Option<f64>,
-}
+pub struct MpvNode(serde_json::Value);
 
-static PROPERTY_FORMAT_MAP: LazyLock<HashMap<&'static str, Format>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-
-    for &prop in FLAG_PROPERTIES {
-        map.insert(prop.trim_end_matches('?'), Format::Flag);
-    }
-    for &prop in INT64_PROPERTIES {
-        map.insert(prop.trim_end_matches('?'), Format::Int64);
-    }
-    for &prop in DOUBLE_PROPERTIES {
-        map.insert(prop.trim_end_matches('?'), Format::Double);
-    }
-    for &prop in STRING_PROPERTIES {
-        map.insert(prop.trim_end_matches('?'), Format::String);
-    }
-    for &prop in JSON_PROPERTIES {
-        map.insert(prop.trim_end_matches('?'), Format::String);
-    }
-
-    map
-});
-
-static JSON_PROPERTY_SET: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
-    JSON_PROPERTIES
-        .iter()
-        .map(|p| p.trim_end_matches('?'))
-        .collect()
-});
-
-pub fn get_format_for_property(property: &str) -> Format {
-    *PROPERTY_FORMAT_MAP.get(property).unwrap_or(&Format::String)
-}
-
-pub fn is_json_property(property: &str) -> bool {
-    JSON_PROPERTY_SET.contains(property)
-}
-
-pub struct MpvJson(Value);
-
-impl MpvJson {
-    pub fn into_inner(self) -> Value {
+impl MpvNode {
+    pub fn into_inner(self) -> serde_json::Value {
         self.0
     }
 }
@@ -83,60 +29,63 @@ unsafe fn cstr_to_str<'a>(cstr: *const std::os::raw::c_char) -> crate::Result<&'
         .map_err(|e| crate::Error::GetProperty(format!("Invalid UTF-8 sequence: {}", e)))
 }
 
-unsafe fn convert_node_to_value(node: *const mpv_node) -> crate::Result<Value> {
+unsafe fn convert_node_to_value(
+    node: *const libmpv2_sys::mpv_node,
+) -> crate::Result<serde_json::Value> {
     Ok(match (*node).format {
-        mpv_format::None => Value::Null,
-        mpv_format::String | mpv_format::OsdString => {
+        libmpv2::mpv_format::None => serde_json::Value::Null,
+        libmpv2::mpv_format::String | libmpv2::mpv_format::OsdString => {
             let s = cstr_to_str((*node).u.string)?;
-            Value::String(s.to_string())
+            serde_json::Value::String(s.to_string())
         }
-        mpv_format::Flag => Value::Bool((*node).u.flag != 0),
-        mpv_format::Int64 => Value::Number((*node).u.int64.into()),
-        mpv_format::Double => {
+        libmpv2::mpv_format::Flag => serde_json::Value::Bool((*node).u.flag != 0),
+        libmpv2::mpv_format::Int64 => serde_json::Value::Number((*node).u.int64.into()),
+        libmpv2::mpv_format::Double => {
             let f = (*node).u.double_;
-            serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number)
+            serde_json::Number::from_f64(f)
+                .map_or(serde_json::Value::Null, serde_json::Value::Number)
         }
-        mpv_format::Array => {
+        libmpv2::mpv_format::Array => {
             if (*node).u.list.is_null() {
-                return Ok(Value::Array(Vec::new()));
+                return Ok(serde_json::Value::Array(Vec::new()));
             }
 
-            let list = (*node).u.list as *const mpv_node_list;
+            let list = (*node).u.list as *const libmpv2_sys::mpv_node_list;
             let mut arr = Vec::with_capacity((*list).num as usize);
             for i in 0..(*list).num {
                 arr.push(convert_node_to_value((*list).values.add(i as usize))?);
             }
-            Value::Array(arr)
+            serde_json::Value::Array(arr)
         }
-        mpv_format::Map => {
+        libmpv2::mpv_format::Map => {
             if (*node).u.list.is_null() {
-                return Ok(Value::Object(JsonMap::new()));
+                return Ok(serde_json::Value::Object(serde_json::Map::new()));
             }
 
-            let list = (*node).u.list as *const mpv_node_list;
-            let mut map = JsonMap::new();
+            let list = (*node).u.list as *const libmpv2_sys::mpv_node_list;
+            let mut map = serde_json::Map::new();
             for i in 0..(*list).num {
                 let key = cstr_to_str(*(*list).keys.add(i as usize))?;
                 let value = convert_node_to_value((*list).values.add(i as usize))?;
                 map.insert(key.to_string(), value);
             }
-            Value::Object(map)
+            serde_json::Value::Object(map)
         }
-        _ => Value::Null,
+        _ => serde_json::Value::Null,
     })
 }
 
-unsafe impl GetData for MpvJson {
+unsafe impl libmpv2::GetData for MpvNode {
     fn get_from_c_void<T, F: FnMut(*mut std::ffi::c_void) -> libmpv2::Result<T>>(
         mut fun: F,
     ) -> libmpv2::Result<Self> {
-        let mut node = std::mem::MaybeUninit::<mpv_node>::uninit();
+        let mut node = std::mem::MaybeUninit::<libmpv2_sys::mpv_node>::uninit();
         fun(node.as_mut_ptr() as *mut _)?;
 
         let node_ptr = node.as_mut_ptr();
 
         let result = match std::panic::catch_unwind(|| unsafe { convert_node_to_value(node_ptr) }) {
-            Ok(Ok(value)) => Ok(MpvJson(value)),
+            Ok(Ok(value)) => Ok(MpvNode(value)),
             _ => Err(libmpv2::Error::Raw(libmpv2::mpv_error::Generic)),
         };
 
@@ -145,8 +94,8 @@ unsafe impl GetData for MpvJson {
         result
     }
 
-    fn get_format() -> Format {
-        Format::Node
+    fn get_format() -> libmpv2::Format {
+        libmpv2::Format::Node
     }
 }
 
@@ -158,17 +107,18 @@ pub enum SerializablePropertyData {
     Flag(bool),
     Int64(i64),
     Double(f64),
-    ParsedJson(Value),
 }
 
-impl<'a> From<PropertyData<'a>> for SerializablePropertyData {
-    fn from(data: PropertyData<'a>) -> Self {
+impl<'a> From<libmpv2::events::PropertyData<'a>> for SerializablePropertyData {
+    fn from(data: libmpv2::events::PropertyData<'a>) -> Self {
         match data {
-            PropertyData::Str(s) => SerializablePropertyData::Str(s.to_string()),
-            PropertyData::OsdStr(s) => SerializablePropertyData::OsdStr(s.to_string()),
-            PropertyData::Flag(b) => SerializablePropertyData::Flag(b),
-            PropertyData::Int64(i) => SerializablePropertyData::Int64(i),
-            PropertyData::Double(d) => SerializablePropertyData::Double(d),
+            libmpv2::events::PropertyData::Str(s) => SerializablePropertyData::Str(s.to_string()),
+            libmpv2::events::PropertyData::OsdStr(s) => {
+                SerializablePropertyData::OsdStr(s.to_string())
+            }
+            libmpv2::events::PropertyData::Flag(b) => SerializablePropertyData::Flag(b),
+            libmpv2::events::PropertyData::Int64(i) => SerializablePropertyData::Int64(i),
+            libmpv2::events::PropertyData::Double(d) => SerializablePropertyData::Double(d),
         }
     }
 }
@@ -181,80 +131,124 @@ pub enum SerializableMpvEvent {
         prefix: String,
         level: String,
         text: String,
+        log_level: String,
     },
-    PropertyChange {
+    GetPropertyReply {
         name: String,
-        data: SerializablePropertyData,
+        result: SerializablePropertyData,
+        reply_userdata: u64,
     },
+    SetPropertyReply {
+        reply_userdata: u64,
+    },
+    CommandReply {
+        reply_userdata: u64,
+    },
+    StartFile,
     EndFile {
         reason: String,
     },
     FileLoaded,
-    StartFile,
+    ClientMessage {
+        message: Vec<String>,
+    },
     VideoReconfig,
     AudioReconfig,
     Seek,
     PlaybackRestart,
+    PropertyChange {
+        name: String,
+        change: SerializablePropertyData,
+        reply_userdata: u64,
+    },
     QueueOverflow,
-    ClientMessage,
     Deprecated,
-    Other(String),
 }
 
-impl<'a> From<Event<'a>> for SerializableMpvEvent {
-    fn from(event: Event<'a>) -> Self {
+impl<'a> From<libmpv2::events::Event<'a>> for SerializableMpvEvent {
+    fn from(event: libmpv2::events::Event<'a>) -> Self {
         match event {
-            Event::PropertyChange { name, change, .. } => {
-                let property_name = name.to_string();
-
-                let data = if is_json_property(&property_name) {
-                    if let PropertyData::Str(json_string) = change {
-                        let parsed = serde_json::from_str(json_string).unwrap_or(Value::Null);
-                        SerializablePropertyData::ParsedJson(parsed)
-                    } else {
-                        change.into()
-                    }
-                } else {
-                    change.into()
-                };
-
-                SerializableMpvEvent::PropertyChange {
-                    name: property_name,
-                    data,
-                }
-            }
-            Event::Shutdown => SerializableMpvEvent::Shutdown,
-            Event::LogMessage {
+            libmpv2::events::Event::Shutdown => SerializableMpvEvent::Shutdown,
+            libmpv2::events::Event::LogMessage {
                 prefix,
                 level,
                 text,
-                ..
-            } => SerializableMpvEvent::LogMessage {
-                prefix: prefix.to_string(),
-                level: level.to_string(),
-                text: text.to_string(),
+                log_level,
+            } => {
+                let log_level = match log_level {
+                    libmpv2::mpv_log_level::Debug => "debug",
+                    libmpv2::mpv_log_level::Error => "error",
+                    libmpv2::mpv_log_level::Fatal => "fatal",
+                    libmpv2::mpv_log_level::Info => "info",
+                    libmpv2::mpv_log_level::None => "none",
+                    libmpv2::mpv_log_level::Warn => "warn",
+                    libmpv2::mpv_log_level::V => "v",
+                    libmpv2::mpv_log_level::Trace => "trace",
+                    _ => todo!(),
+                }
+                .to_string();
+                SerializableMpvEvent::LogMessage {
+                    prefix: prefix.to_string(),
+                    level: level.to_string(),
+                    text: text.to_string(),
+                    log_level: log_level,
+                }
+            }
+            libmpv2::events::Event::GetPropertyReply {
+                name,
+                result,
+                reply_userdata,
+            } => SerializableMpvEvent::GetPropertyReply {
+                name: name.to_string(),
+                result: result.into(),
+                reply_userdata,
             },
-            Event::EndFile(reason) => {
+            libmpv2::events::Event::SetPropertyReply(reply_userdata) => {
+                SerializableMpvEvent::SetPropertyReply { reply_userdata }
+            }
+            libmpv2::events::Event::CommandReply(reply_userdata) => {
+                SerializableMpvEvent::CommandReply { reply_userdata }
+            }
+            libmpv2::events::Event::StartFile => SerializableMpvEvent::StartFile,
+            libmpv2::events::Event::EndFile(reason) => {
                 let reason_str = match reason {
-                    mpv_end_file_reason::Eof => "eof",
-                    mpv_end_file_reason::Stop => "stop",
-                    mpv_end_file_reason::Quit => "quit",
-                    mpv_end_file_reason::Error => "error",
-                    mpv_end_file_reason::Redirect => "redirect",
-                    _ => "unknown",
+                    libmpv2::mpv_end_file_reason::Eof => "eof",
+                    libmpv2::mpv_end_file_reason::Stop => "stop",
+                    libmpv2::mpv_end_file_reason::Quit => "quit",
+                    libmpv2::mpv_end_file_reason::Error => "error",
+                    libmpv2::mpv_end_file_reason::Redirect => "redirect",
+                    _ => todo!(),
                 }
                 .to_string();
                 SerializableMpvEvent::EndFile { reason: reason_str }
             }
-            Event::FileLoaded => SerializableMpvEvent::FileLoaded,
-            Event::StartFile => SerializableMpvEvent::StartFile,
-            Event::VideoReconfig => SerializableMpvEvent::VideoReconfig,
-            Event::AudioReconfig => SerializableMpvEvent::AudioReconfig,
-            Event::Seek => SerializableMpvEvent::Seek,
-            Event::PlaybackRestart => SerializableMpvEvent::PlaybackRestart,
-            Event::QueueOverflow => SerializableMpvEvent::QueueOverflow,
-            Event::Deprecated { .. } => SerializableMpvEvent::Deprecated,
-            _ => SerializableMpvEvent::Other(format!("{:?}", event)),
+            libmpv2::events::Event::FileLoaded => SerializableMpvEvent::FileLoaded,
+            libmpv2::events::Event::ClientMessage(message) => SerializableMpvEvent::ClientMessage {
+                message: message.iter().map(|s| s.to_string()).collect(),
+            },
+            libmpv2::events::Event::VideoReconfig => SerializableMpvEvent::VideoReconfig,
+            libmpv2::events::Event::AudioReconfig => SerializableMpvEvent::AudioReconfig,
+            libmpv2::events::Event::Seek => SerializableMpvEvent::Seek,
+            libmpv2::events::Event::PlaybackRestart => SerializableMpvEvent::PlaybackRestart,
+            libmpv2::events::Event::PropertyChange {
+                name,
+                change,
+                reply_userdata,
+            } => SerializableMpvEvent::PropertyChange {
+                name: name.to_string(),
+                change: change.into(),
+                reply_userdata,
+            },
+            libmpv2::events::Event::QueueOverflow => SerializableMpvEvent::QueueOverflow,
+            libmpv2::events::Event::Deprecated(_) => SerializableMpvEvent::Deprecated,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VideoMarginRatio {
+    pub left: Option<f64>,
+    pub right: Option<f64>,
+    pub top: Option<f64>,
+    pub bottom: Option<f64>,
 }
