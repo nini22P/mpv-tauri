@@ -1,4 +1,3 @@
-use serde_json::Value;
 use tauri::{command, AppHandle, Runtime};
 
 use crate::MpvConfig;
@@ -24,7 +23,7 @@ pub(crate) async fn destroy<R: Runtime>(app: AppHandle<R>, window_label: &str) -
 pub(crate) async fn command<R: Runtime>(
     app: AppHandle<R>,
     name: String,
-    args: Vec<Value>,
+    args: Vec<serde_json::Value>,
     window_label: String,
 ) -> Result<()> {
     tauri::async_runtime::spawn_blocking(move || app.mpv().command(&name, &args, &window_label))
@@ -36,7 +35,7 @@ pub(crate) async fn command<R: Runtime>(
 pub(crate) async fn set_property<R: Runtime>(
     app: AppHandle<R>,
     name: String,
-    value: Value,
+    value: serde_json::Value,
     window_label: String,
 ) -> Result<()> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -50,11 +49,14 @@ pub(crate) async fn set_property<R: Runtime>(
 pub(crate) async fn get_property<R: Runtime>(
     app: AppHandle<R>,
     name: String,
+    format: String,
     window_label: String,
-) -> Result<Value> {
-    tauri::async_runtime::spawn_blocking(move || app.mpv().get_property(name, &window_label))
-        .await
-        .map_err(|e| crate::Error::GetProperty(e.to_string()))?
+) -> Result<serde_json::Value> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.mpv().get_property(name, Some(format), &window_label)
+    })
+    .await
+    .map_err(|e| crate::Error::GetProperty(e.to_string()))?
 }
 
 #[command]

@@ -8,8 +8,19 @@ use tauri::Emitter;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
 use crate::error::mpv_error_code_to_name;
-use crate::{models::*, MpvExt};
-use crate::{MpvInstance, Result};
+use crate::models::*;
+use crate::{MpvExt, Result};
+
+fn get_format_from_string(format_str: &str) -> Result<libmpv2::Format> {
+    match format_str {
+        "string" => Ok(libmpv2::Format::String),
+        "flag" => Ok(libmpv2::Format::Flag),
+        "int64" => Ok(libmpv2::Format::Int64),
+        "double" => Ok(libmpv2::Format::Double),
+        "node" => Ok(libmpv2::Format::Node),
+        _ => Err(crate::Error::Format(format_str.to_string())),
+    }
+}
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
@@ -94,11 +105,14 @@ impl<R: Runtime> Mpv<R> {
                         .map_err(|e| crate::Error::ClientCreation(e.to_string()))?;
 
                     if let Some(observed_properties) = mpv_config.observed_properties {
-                        for property in observed_properties {
-                            let format = get_format_for_property(&property);
-                            mpv_client
-                                .observe_property(&property, format, 0)
-                                .map_err(|e| crate::Error::Command(e.to_string()))?;
+                        trace!("Observing properties on init: {:?}", observed_properties);
+                        for (property, format_str) in observed_properties {
+                            let format = get_format_from_string(&format_str)?;
+                            trace!("Observing '{}' with format {:?}", property, format);
+                            if let Err(e) = mpv_client.observe_property(&property, format, 0) {
+                                error!("Failed to observe property '{}': {}", property, e);
+                                return Err(crate::Error::Mpv(e.to_string()));
+                            }
                         }
                     }
 
@@ -327,6 +341,7 @@ impl<R: Runtime> Mpv<R> {
     pub fn get_property(
         &self,
         name: String,
+        format_str: Option<String>,
         window_label: &str,
     ) -> crate::Result<serde_json::Value> {
         let instances_lock = match self.app.mpv().instances.lock() {
@@ -339,50 +354,43 @@ impl<R: Runtime> Mpv<R> {
 
         if let Some(instance) = instances_lock.get(window_label) {
             let result: std::result::Result<serde_json::Value, libmpv2::Error> = {
-                let format = get_format_for_property(&name);
-
-                match format {
-                    libmpv2::Format::Flag => instance
-                        .mpv
-                        .get_property::<bool>(&name)
-                        .map(serde_json::Value::from),
-                    libmpv2::Format::Int64 => instance
-                        .mpv
-                        .get_property::<i64>(&name)
-                        .map(serde_json::Value::from),
-                    libmpv2::Format::Double => instance
-                        .mpv
-                        .get_property::<f64>(&name)
-                        .map(serde_json::Value::from),
-                    libmpv2::Format::String => match instance.mpv.get_property::<String>(&name) {
-                        Ok(str_val) => {
-                            if is_json_property(&name) {
-                                serde_json::from_str(&str_val).map_err(|_| {
-                                    libmpv2::Error::Raw(libmpv2::mpv_error::PropertyError)
-                                })
-                            } else {
-                                Ok(serde_json::Value::from(str_val))
+                if let Some(s) = format_str {
+                    let format = get_format_from_string(&s)?;
+                    match format {
+                        libmpv2::Format::Flag => instance
+                            .mpv
+                            .get_property::<bool>(&name)
+                            .map(serde_json::Value::from),
+                        libmpv2::Format::Int64 => instance
+                            .mpv
+                            .get_property::<i64>(&name)
+                            .map(serde_json::Value::from),
+                        libmpv2::Format::Double => instance
+                            .mpv
+                            .get_property::<f64>(&name)
+                            .map(serde_json::Value::from),
+                        libmpv2::Format::String => instance
+                            .mpv
+                            .get_property::<String>(&name)
+                            .map(serde_json::Value::from),
+                        libmpv2::Format::Node => {
+                            match instance.mpv.get_property::<MpvNode>(&name) {
+                                Ok(wrapper) => Ok(wrapper.into_inner()),
+                                Err(e) => Err(e),
                             }
                         }
-                        Err(e) => Err(e),
-                    },
-                    _ => match instance.mpv.get_property::<MpvJson>(&name) {
-                        Ok(wrapper) => Ok(wrapper.into_inner()),
-                        Err(e) => Err(e),
-                    },
+                    }
+                } else {
+                    instance
+                        .mpv
+                        .get_property::<String>(&name)
+                        .map(serde_json::Value::from)
                 }
             };
 
             let value = match result {
                 Ok(val) => val,
-                Err(e) => match e {
-                    libmpv2::Error::Raw(libmpv2::mpv_error::PropertyUnavailable) => {
-                        serde_json::json!(null)
-                    }
-                    other_libmpv_error => {
-                        return Err(other_libmpv_error.into());
-                    }
-                },
+                Err(e) => return Err(e.into()),
             };
 
             trace!("GET PROPERTY '{}' '{:?}'", name, value);

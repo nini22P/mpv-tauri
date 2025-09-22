@@ -1,22 +1,20 @@
 import { useEffect } from 'react';
-import { init, observeProperties, MpvConfig, destroy } from 'tauri-plugin-libmpv-api';
+import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api';
 import usePlayerStore from '../store';
 
 const OBSERVED_PROPERTIES = [
-  'playlist',
-  'filename',
-  'pause',
-  'eof-reached',
-  'time-pos',
-  'duration',
-  'volume',
-  'mute',
-  'speed',
-] as const;
+  ['playlist', 'string'],
+  ['filename', 'string'],
+  ['pause', 'flag'],
+  ['eof-reached', 'flag'],
+  ['time-pos', 'double'],
+  ['duration', 'double'],
+  ['volume', 'double'],
+  ['mute', 'flag'],
+  ['speed', 'double'],
+] as const satisfies MpvObservableProperty[];
 
 const useMpv = () => {
-
-  const connection = usePlayerStore.use.connection();
 
   const updatePlayerState = usePlayerStore.use.updatePlayerState();
 
@@ -24,11 +22,11 @@ const useMpv = () => {
     (async () => {
       const mpvConfig: MpvConfig = {
         initialProperties: {
-          "vo": "gpu-next",
-          "hwdec": "auto-safe",
-          "keep-open": "yes",
-          "force-window": "yes",
-          "pause": "yes",
+          'vo': 'gpu-next',
+          'hwdec': 'auto-safe',
+          'keep-open': 'yes',
+          'force-window': 'yes',
+          'pause': 'yes',
         },
         observedProperties: OBSERVED_PROPERTIES,
       };
@@ -54,43 +52,54 @@ const useMpv = () => {
   }, []);
 
   useEffect(() => {
+    let unlistenPromise = listenEvents(
+      (mpvEvent) => {
+        if (mpvEvent.event !== 'property-change') {
+          console.log(mpvEvent);
+        }
+      });
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
     let unlistenPromise = observeProperties(
       OBSERVED_PROPERTIES,
-      ({ name, data }) => {
+      ({ name, change }) => {
         if (name !== 'time-pos')
-          console.log(name, data)
-        if (connection !== 'connected')
-          updatePlayerState('connection', 'connected');
+          console.log(name, change)
         switch (name) {
           case 'playlist':
-            updatePlayerState('playlist', data);
+            updatePlayerState('playlist', JSON.parse(change));
             break;
           case 'filename':
-            updatePlayerState('filename', data);
+            updatePlayerState('filename', change);
             break;
           case 'pause':
-            updatePlayerState('isPaused', data);
+            updatePlayerState('isPaused', change);
             break;
           case 'eof-reached':
-            updatePlayerState('eofReached', data ?? false);
+            updatePlayerState('eofReached', change ?? false);
             break;
           case 'time-pos':
-            updatePlayerState('timePos', data ?? 0);
+            updatePlayerState('timePos', change ?? 0);
             break;
           case 'duration':
-            updatePlayerState('duration', data ?? 0);
+            updatePlayerState('duration', change ?? 0);
             break;
           case 'volume':
-            updatePlayerState('volume', data);
+            updatePlayerState('volume', change);
             break;
           case 'mute':
-            updatePlayerState('mute', data);
+            updatePlayerState('mute', change);
             break;
           case 'speed':
-            updatePlayerState('speed', data);
+            updatePlayerState('speed', change);
             break;
           default:
-            console.log(name, data);
+            console.log(name, change);
             break;
         }
       });
