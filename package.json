@@ -5,7 +5,7 @@
     "build:plugins": "pnpm --filter \"./plugins/*\" build",
     "build:mpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-mpv-example tauri build",
     "build:libmpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-libmpv-example tauri build",
-    "example:mpv": "pnpm build:plugins && pnpm --filter tauri-plugin-mpv-example tauri dev",
-    "example:libmpv": "pnpm build:plugins && pnpm --filter tauri-plugin-libmpv-example tauri dev"
+    "example:mpv": "pnpm build:plugins && cd examples/mpv-example && pnpm tauri dev",
+    "example:libmpv": "pnpm build:plugins && cd examples/libmpv-example && pnpm tauri dev"
   }
 }
