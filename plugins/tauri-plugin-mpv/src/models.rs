@@ -10,8 +10,8 @@ pub struct MpvInstance {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MpvConfig {
-    pub mpv_path: Option<String>,
-    pub mpv_args: Option<Vec<String>>,
+    pub path: Option<String>,
+    pub args: Option<Vec<String>>,
     pub observed_properties: Option<Vec<String>>,
     pub ipc_timeout_ms: Option<u64>,
     pub show_mpv_output: Option<bool>,

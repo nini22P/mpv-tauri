@@ -65,7 +65,7 @@ const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as con
 
 // mpv configuration
 const mpvConfig: MpvConfig = {
-  mpvArgs: [
+  args: [
     '--vo=gpu-next',
     '--hwdec=auto-safe',
     '--keep-open=yes',
