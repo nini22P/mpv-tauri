@@ -10,21 +10,86 @@ on:
       - README.md
 
 jobs:
-  build-windows:
+  build-mpv-example-windows:
     runs-on: windows-latest
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+
       - name: setup node
         uses: actions/setup-node@v5
         with:
           node-version: lts/*
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
-      - name: build example
-        run: npm install -g pnpm && pnpm install && pnpm build:mpv-examples
+
+      - name: Build example
+        run: |
+          pnpm install -g pnpm
+          pnpm install
+          pnpm build:libmpv-examples
+        shell: pwsh
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: tauri-plugin-mpv-example-windows
           path: target/release/tauri-plugin-mpv-example.exe
+
+  build-libmpv-example-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download and prepare libmpv assets
+        id: prepare_mpv
+        run: |
+          curl -L -o sha256.txt "https://github.com/zhongfly/mpv-winbuild/releases/latest/download/sha256.txt"
+          
+          $line = Get-Content sha256.txt | Where-Object { $_ -like "*mpv-dev-lgpl-x86_64*" -and $_ -notlike "*v3*" } | Select-Object -First 1
+          if ($null -eq $line) {
+            Write-Error "Could not find 'mpv-dev-lgpl-x86_64' in sha256.txt."
+            exit 1
+          }
+          $file_name = ($line -split ' ')[1].Trim()
+          $download_url = "https://github.com/zhongfly/mpv-winbuild/releases/latest/download/$file_name"
+          
+          Write-Host "Found asset: $file_name"
+          
+          curl -L -o "$file_name" "$download_url"
+          7z x "$file_name" -o./mpv-build
+          
+          $lib_file = Get-Item -Path "./mpv-build/*/libmpv.dll.a"
+          Copy-Item -Path $lib_file.FullName -Destination "./mpv.lib"
+        shell: pwsh
+
+      - name: Build example
+        run: |
+          pnpm install -g pnpm
+          pnpm install
+          pnpm build:libmpv-examples
+        shell: pwsh
+
+      - name: Package runtime artifacts
+        run: |
+          $dll_file = Get-Item -Path "./mpv-build/*/mpv-2.dll"
+          Copy-Item -Path $dll_file.FullName -Destination "./target/release/mpv-2.dll"
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-plugin-libmpv-example-windows
+          path: |
+            target/release/tauri-plugin-libmpv-example.exe
+            target/release/mpv-2.dll
