@@ -41,19 +41,19 @@
     "LICENSE"
   ],
   "scripts": {
-    "example": "npm install && npm run build && cd examples/react && npm install && npm run tauri dev",
-    "build": "rollup -c",
-    "build:example": "npm install && npm run build && cd examples/react && npm install && npm run tauri build",
-    "prepublishOnly": "npm run build",
-    "pretest": "npm run build"
-  },
-  "dependencies": {
-    "@tauri-apps/api": "2.8.0"
+    "build:plugins": "pnpm --filter \"./plugins/*\" build",
+    "build:mpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-mpv-example tauri build",
+    "build:libmpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-libmpv-example tauri build",
+    "example:mpv": "pnpm build:plugins && cd examples/mpv-example && pnpm tauri dev",
+    "example:libmpv": "pnpm build:plugins && cd examples/libmpv-example && pnpm tauri dev",
+    "lint": "eslint ."
   },
   "devDependencies": {
-    "@rollup/plugin-typescript": "12.1.4",
-    "rollup": "^4.50.1",
-    "tslib": "^2.6.2",
-    "typescript": "^5.3.3"
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.0",
+    "typescript-eslint": "^8.44.1"
   }
 }
