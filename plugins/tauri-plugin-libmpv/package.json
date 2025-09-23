@@ -3,15 +3,15 @@
   "version": "0.0.1",
   "author": "22",
   "description": "A Tauri plugin to embed the libmpv window in your app.",
-  "license": "MIT",
+  "license": "LGPL-2.1",
   "type": "module",
-  "homepage": "https://github.com/nini22P/tauri-plugin-mpv",
+  "homepage": "https://github.com/nini22P/mpv-tauri",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nini22P/tauri-plugin-mpv.git"
+    "url": "https://github.com/nini22P/mpv-tauri.git"
   },
   "bugs": {
-    "url": "https://github.com/nini22P/tauri-plugin-mpv/issues"
+    "url": "https://github.com/nini22P/mpv-tauri/issues"
   },
   "keywords": [
     "tauri",
