@@ -8,6 +8,7 @@ pub struct MpvInstance {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MpvConfig {
+    pub initial_options: Option<HashMap<String, serde_json::Value>>,
     pub initial_properties: Option<HashMap<String, serde_json::Value>>,
     pub observed_properties: Option<HashMap<String, String>>,
 }
