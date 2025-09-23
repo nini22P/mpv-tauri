@@ -26,9 +26,9 @@ jobs:
 
       - name: Build example
         run: |
-          pnpm install -g pnpm
+          npm install -g pnpm
           pnpm install
-          pnpm build:libmpv-examples
+          pnpm build:mpv-examples
         shell: pwsh
 
       - name: Upload artifact
@@ -67,23 +67,21 @@ jobs:
           Write-Host "Found asset: $file_name"
           
           curl -L -o "$file_name" "$download_url"
-          7z x "$file_name" -o./mpv-build
+          7z x "$file_name" -o"mpv-build-dev"
           
-          $lib_file = Get-Item -Path "./mpv-build/*/libmpv.dll.a"
-          Copy-Item -Path $lib_file.FullName -Destination "./mpv.lib"
+          Copy-Item -Path "./mpv-build-dev/libmpv.dll.a" -Destination "./mpv.lib"
         shell: pwsh
 
       - name: Build example
         run: |
-          pnpm install -g pnpm
+          npm install -g pnpm
           pnpm install
           pnpm build:libmpv-examples
         shell: pwsh
 
       - name: Package runtime artifacts
         run: |
-          $dll_file = Get-Item -Path "./mpv-build/*/mpv-2.dll"
-          Copy-Item -Path $dll_file.FullName -Destination "./target/release/mpv-2.dll"
+          Copy-Item -Path "./mpv-build-dev/libmpv-2.dll" -Destination "./target/release/libmpv-2.dll"
         shell: pwsh
 
       - name: Upload artifact
@@ -92,4 +90,4 @@ jobs:
           name: tauri-plugin-libmpv-example-windows
           path: |
             target/release/tauri-plugin-libmpv-example.exe
-            target/release/mpv-2.dll
+            target/release/libmpv-2.dll
