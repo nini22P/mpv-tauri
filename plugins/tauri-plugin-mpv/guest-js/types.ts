@@ -1,6 +1,6 @@
 export interface MpvConfig {
-  mpvPath?: string;
-  mpvArgs?: string[];
+  path?: string;
+  args?: string[];
   observedProperties?: readonly string[];
   ipcTimeoutMs?: number;
   showMpvOutput?: boolean;

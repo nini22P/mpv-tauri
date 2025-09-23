@@ -60,9 +60,9 @@ pub fn init_mpv_process<R: Runtime>(
         "--profile=libmpv".to_string(),
     ];
 
-    args.extend(mpv_config.mpv_args.unwrap_or_default());
+    args.extend(mpv_config.args.unwrap_or_default());
 
-    let mpv_path = mpv_config.mpv_path.unwrap_or_else(|| "mpv".to_string());
+    let mpv_path = mpv_config.path.unwrap_or_else(|| "mpv".to_string());
 
     debug!(
         "Spawning mpv process for window '{}' with args: {} {}",

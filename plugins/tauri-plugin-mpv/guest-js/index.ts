@@ -27,7 +27,7 @@ export const COMMON_PROPERTIES = [
 ] as const;
 
 export const DEFAULT_MPV_CONFIG: MpvConfig = {
-  mpvArgs: [
+  args: [
     '--vo=gpu-next',
     '--hwdec=auto-safe',
     '--keep-open=yes',
@@ -56,7 +56,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
  * 
  * // mpv configuration
  * const mpvConfig: MpvConfig = {
- *   mpvArgs: [
+ *   args: [
  *     '--vo=gpu-next',
  *     '--hwdec=auto-safe',
  *     '--keep-open=yes',

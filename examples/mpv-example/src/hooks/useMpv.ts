@@ -23,7 +23,7 @@ const useMpv = () => {
   useEffect(() => {
     (async () => {
       const mpvConfig: MpvConfig = {
-        mpvArgs: [
+        args: [
           '--vo=gpu-next',
           '--hwdec=auto-safe',
           '--keep-open=yes',
