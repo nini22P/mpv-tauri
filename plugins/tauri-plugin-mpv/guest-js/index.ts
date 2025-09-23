@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { listen, UnlistenFn } from '@tauri-apps/api/event'
 
 import type {
   MpvCommand,
@@ -10,9 +10,9 @@ import type {
   MpvCommandResponse,
   MpvPropertyEventFor,
   MpvPropertyValue,
-} from './types';
+} from './types'
 
-export * from './types';
+export * from './types'
 
 export const COMMON_PROPERTIES = [
   'playlist',      // Playlist
@@ -24,7 +24,7 @@ export const COMMON_PROPERTIES = [
   'volume',        // Volume (0-100)
   'mute',          // Mute state
   'speed',         // Playback speed
-] as const;
+] as const
 
 export const DEFAULT_MPV_CONFIG: MpvConfig = {
   args: [
@@ -36,7 +36,7 @@ export const DEFAULT_MPV_CONFIG: MpvConfig = {
   observedProperties: COMMON_PROPERTIES,
   ipcTimeoutMs: 2000,
   showMpvOutput: false,
-};
+}
 
 
 /**
@@ -84,21 +84,21 @@ export async function init(
   mpvConfig = {
     ...DEFAULT_MPV_CONFIG,
     ...mpvConfig,
-  };
+  }
 
-  windowLabel = windowLabel ?? getCurrentWindow().label;
+  windowLabel = windowLabel ?? getCurrentWindow().label
 
   return await invoke<string>('plugin:mpv|init', {
     mpvConfig,
     windowLabel,
-  });
+  })
 }
 
 
 /**
  * @deprecated Use `init()` instead. This function will be removed in a future version.
  */
-export const initializeMpv = init;
+export const initializeMpv = init
 
 /**
  * Destroy mpv player.
@@ -115,18 +115,18 @@ export const initializeMpv = init;
  */
 export async function destroy(windowLabel?: string): Promise<void> {
 
-  windowLabel = windowLabel ?? getCurrentWindow().label;
+  windowLabel = windowLabel ?? getCurrentWindow().label
 
   return await invoke('plugin:mpv|destroy', {
     windowLabel,
-  });
+  })
 }
 
 
 /**
  * @deprecated Use `destroy()` instead. This function will be removed in a future version.
  */
-export const destroyMpv = destroy;
+export const destroyMpv = destroy
 
 /**
  * Listen to mpv property change events.
@@ -212,34 +212,34 @@ export async function observeMpvProperties(
 ): Promise<UnlistenFn>;
 
 export async function observeMpvProperties(
-  arg1: ReadonlyArray<string> | ((event: any) => void),
-  arg2?: ((event: any) => void) | string,
+  arg1: ReadonlyArray<string> | ((event: unknown) => void),
+  arg2?: ((event: unknown) => void) | string,
   arg3?: string
 ): Promise<UnlistenFn> {
-  let properties: ReadonlyArray<string>;
-  let callback: (event: any) => void;
-  let windowLabel: string | undefined;
+  let properties: ReadonlyArray<string>
+  let callback: (event: unknown) => void
+  let windowLabel: string | undefined
 
   if (typeof arg1 === 'function') {
-    properties = COMMON_PROPERTIES;
-    callback = arg1;
-    windowLabel = arg2 as string | undefined;
+    properties = COMMON_PROPERTIES
+    callback = arg1
+    windowLabel = arg2 as string | undefined
   } else {
-    properties = arg1;
-    callback = arg2 as (event: any) => void;
-    windowLabel = arg3;
+    properties = arg1
+    callback = arg2 as (event: unknown) => void
+    windowLabel = arg3
   }
 
   return await listenMpvEvents(
     (mpvEvent) => {
       if (mpvEvent.event === 'property-change') {
         if (properties.includes(mpvEvent.name)) {
-          callback(mpvEvent);
+          callback(mpvEvent)
         }
       }
     },
     windowLabel,
-  );
+  )
 }
 
 
@@ -284,11 +284,11 @@ export async function listenMpvEvents(
   windowLabel?: string
 ): Promise<UnlistenFn> {
 
-  windowLabel = windowLabel ?? getCurrentWindow().label;
+  windowLabel = windowLabel ?? getCurrentWindow().label
 
-  const eventName = `mpv-event-${windowLabel}`;
+  const eventName = `mpv-event-${windowLabel}`
 
-  return await listen<MpvEvent>(eventName, (event) => callback(event.payload));
+  return await listen<MpvEvent>(eventName, (event) => callback(event.payload))
 }
 
 
@@ -370,46 +370,46 @@ export async function command(
   arg2?: unknown[] | string,
   arg3?: string
 ): Promise<MpvCommandResponse | unknown> {
-  let finalMpvCommand: MpvCommand;
-  let finalWindowLabel: string | undefined;
-  let isShortcut = false;
+  let finalMpvCommand: MpvCommand
+  let finalWindowLabel: string | undefined
+  let isShortcut = false
 
   if (typeof arg1 === 'string') {
-    isShortcut = true;
-    const name = arg1;
-    const args = Array.isArray(arg2) ? arg2 : [];
-    finalWindowLabel = Array.isArray(arg2) ? arg3 : arg2;
+    isShortcut = true
+    const name = arg1
+    const args = Array.isArray(arg2) ? arg2 : []
+    finalWindowLabel = Array.isArray(arg2) ? arg3 : arg2
 
     finalMpvCommand = {
       command: [name, ...args],
-    };
+    }
   } else {
-    isShortcut = false;
-    finalMpvCommand = arg1;
-    finalWindowLabel = arg2 as string;
+    isShortcut = false
+    finalMpvCommand = arg1
+    finalWindowLabel = arg2 as string
   }
 
-  finalWindowLabel = finalWindowLabel ?? getCurrentWindow().label;
+  finalWindowLabel = finalWindowLabel ?? getCurrentWindow().label
 
   const response = await invoke<MpvCommandResponse>('plugin:mpv|command', {
     mpvCommand: finalMpvCommand,
     windowLabel: finalWindowLabel,
-  });
+  })
 
   if (isShortcut) {
     if (response.error !== 'success') {
-      throw new Error(`mpv command failed: ${response.error}`);
+      throw new Error(`mpv command failed: ${response.error}`)
     }
-    return response.data;
+    return response.data
   } else {
-    return response;
+    return response
   }
 }
 
 /**
  * @deprecated Use `command()` instead. This function will be removed in a future version.
  */
-export const sendMpvCommand = command;
+export const sendMpvCommand = command
 
 
 /**
@@ -438,8 +438,8 @@ export async function getProperty<
   name: K,
   windowLabel?: string
 ): Promise<[T] extends [never] ? MpvPropertyValue<K> : T> {
-  const value = await command('get_property', [name], windowLabel);
-  return value as [T] extends [never] ? MpvPropertyValue<K> : T;
+  const value = await command('get_property', [name], windowLabel)
+  return value as [T] extends [never] ? MpvPropertyValue<K> : T
 }
 
 
@@ -471,7 +471,7 @@ export async function setProperty<
   value: [T] extends [never] ? MpvPropertyValue<K> : T,
   windowLabel?: string
 ): Promise<void> {
-  await command('set_property', [name, value], windowLabel);
+  await command('set_property', [name, value], windowLabel)
 }
 
 
@@ -509,10 +509,10 @@ export async function setProperty<
  */
 export async function setVideoMarginRatio(ratio: VideoMarginRatio, windowLabel?: string): Promise<void> {
 
-  windowLabel = windowLabel ?? getCurrentWindow().label;
+  windowLabel = windowLabel ?? getCurrentWindow().label
 
   return await invoke<void>('plugin:mpv|set_video_margin_ratio', {
     ratio,
     windowLabel,
-  });
+  })
 }

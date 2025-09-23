@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api';
-import usePlayerStore from '../store';
+import { useEffect } from 'react'
+import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api'
+import usePlayerStore from '../store'
 
 const OBSERVED_PROPERTIES = [
   ['playlist', 'string'],
@@ -12,11 +12,11 @@ const OBSERVED_PROPERTIES = [
   ['volume', 'double'],
   ['mute', 'flag'],
   ['speed', 'double'],
-] as const satisfies MpvObservableProperty[];
+] as const satisfies MpvObservableProperty[]
 
 const useMpv = () => {
 
-  const updatePlayerState = usePlayerStore.use.updatePlayerState();
+  const updatePlayerState = usePlayerStore.use.updatePlayerState()
 
   useEffect(() => {
     (async () => {
@@ -31,85 +31,85 @@ const useMpv = () => {
           'pause': 'yes',
         },
         observedProperties: OBSERVED_PROPERTIES,
-      };
+      }
 
       try {
-        console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
-        await init(mpvConfig);
-        console.log('mpv initialization completed successfully!');
-        updatePlayerState('connection', 'connected');
+        console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES)
+        await init(mpvConfig)
+        console.log('mpv initialization completed successfully!')
+        updatePlayerState('connection', 'connected')
       } catch (error) {
-        console.error('mpv initialization failed:', error);
-        updatePlayerState('connection', 'error');
+        console.error('mpv initialization failed:', error)
+        updatePlayerState('connection', 'error')
       }
-    })();
+    })()
   }, [])
 
   useEffect(() => {
-    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroy();
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroy()
+    window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [])
 
   useEffect(() => {
-    let unlistenPromise = listenEvents(
+    const unlistenPromise = listenEvents(
       (mpvEvent) => {
         if (mpvEvent.event !== 'property-change') {
-          console.log(mpvEvent);
+          console.log(mpvEvent)
         }
-      });
+      })
 
     return () => {
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, []);
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
 
   useEffect(() => {
-    let unlistenPromise = observeProperties(
+    const unlistenPromise = observeProperties(
       OBSERVED_PROPERTIES,
       ({ name, change }) => {
         if (name !== 'time-pos')
           console.log(name, change)
         switch (name) {
           case 'playlist':
-            updatePlayerState('playlist', JSON.parse(change));
-            break;
+            updatePlayerState('playlist', JSON.parse(change))
+            break
           case 'filename':
-            updatePlayerState('filename', change);
-            break;
+            updatePlayerState('filename', change)
+            break
           case 'pause':
-            updatePlayerState('isPaused', change);
-            break;
+            updatePlayerState('isPaused', change)
+            break
           case 'eof-reached':
-            updatePlayerState('eofReached', change ?? false);
-            break;
+            updatePlayerState('eofReached', change ?? false)
+            break
           case 'time-pos':
-            updatePlayerState('timePos', change ?? 0);
-            break;
+            updatePlayerState('timePos', change ?? 0)
+            break
           case 'duration':
-            updatePlayerState('duration', change ?? 0);
-            break;
+            updatePlayerState('duration', change ?? 0)
+            break
           case 'volume':
-            updatePlayerState('volume', change);
-            break;
+            updatePlayerState('volume', change)
+            break
           case 'mute':
-            updatePlayerState('mute', change);
-            break;
+            updatePlayerState('mute', change)
+            break
           case 'speed':
-            updatePlayerState('speed', change);
-            break;
+            updatePlayerState('speed', change)
+            break
           default:
-            console.log(name, change);
-            break;
+            console.log(name, change)
+            break
         }
-      });
+      })
 
     return () => {
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, []);
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
 }
 
-export default useMpv;
+export default useMpv

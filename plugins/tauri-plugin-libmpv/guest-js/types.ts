@@ -40,7 +40,7 @@ interface MpvEventBase<E extends MpvEventType> {
   event: E;
 }
 
-export interface MpvShutdownEvent extends MpvEventBase<'shutdown'> { }
+export type MpvShutdownEvent = MpvEventBase<'shutdown'>
 
 export interface MpvLogMessageEvent extends MpvEventBase<'log-message'> {
   prefix: string;
@@ -63,22 +63,22 @@ export interface MpvCommandReplyEvent extends MpvEventBase<'command-reply'> {
   reply_userdata: number;
 }
 
-export interface MpvStartFileEvent extends MpvEventBase<'start-file'> { }
+export type MpvStartFileEvent = MpvEventBase<'start-file'>
 
 export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
   reason: 'eof' | 'stop' | 'quit' | 'error' | 'redirect';
 }
 
-export interface MpvFileLoadedEvent extends MpvEventBase<'file-loaded'> { }
+export type MpvFileLoadedEvent = MpvEventBase<'file-loaded'>
 
 export interface MpvClientMessageEvent extends MpvEventBase<'client-message'> {
   message: string[];
 }
 
-export interface MpvVideoReconfigEvent extends MpvEventBase<'video-reconfig'> { }
-export interface MpvAudioReconfigEvent extends MpvEventBase<'audio-reconfig'> { }
-export interface MpvSeekEvent extends MpvEventBase<'seek'> { }
-export interface MpvPlaybackRestartEvent extends MpvEventBase<'playback-restart'> { }
+export type MpvVideoReconfigEvent = MpvEventBase<'video-reconfig'>
+export type MpvAudioReconfigEvent = MpvEventBase<'audio-reconfig'>
+export type MpvSeekEvent = MpvEventBase<'seek'>
+export type MpvPlaybackRestartEvent = MpvEventBase<'playback-restart'>
 
 export interface MpvPropertyChangeEvent<TName extends string, TValue>
   extends MpvEventBase<'property-change'> {
@@ -94,8 +94,8 @@ export type MpvEventFromProperties<T extends MpvObservableProperty> = T extends 
   ? MpvPropertyChangeEvent<TName, MpvFormatToType[TFormat]>
   : never;
 
-export interface MpvQueueOverflowEvent extends MpvEventBase<'queue-overflow'> { }
-export interface MpvDeprecatedEvent extends MpvEventBase<'deprecated'> { }
+export type MpvQueueOverflowEvent = MpvEventBase<'queue-overflow'>
+export type MpvDeprecatedEvent = MpvEventBase<'deprecated'>
 
 export type MpvEvent =
   | MpvShutdownEvent

@@ -1,39 +1,39 @@
-import { open } from '@tauri-apps/plugin-dialog';
-import './Controls.css';
-import formatTime from '../utils/formatTime';
-import { useState } from 'react';
-import usePlayerStore from '../store';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { loadFile, seek, stop, play, pause, playlistPrev, playlistNext, playlistPlay } from '../utils/commands';
+import { open } from '@tauri-apps/plugin-dialog'
+import './Controls.css'
+import formatTime from '../utils/formatTime'
+import { useState } from 'react'
+import usePlayerStore from '../store'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { loadFile, seek, stop, play, pause, playlistPrev, playlistNext, playlistPlay } from '../utils/commands'
 
 const Controls = () => {
 
-  const isPaused = usePlayerStore.use.isPaused();
-  const playlist = usePlayerStore.use.playlist();
-  const timePos = usePlayerStore.use.timePos();
-  const duration = usePlayerStore.use.duration();
-  const filename = usePlayerStore.use.filename();
-  const eofReached = usePlayerStore.use.eofReached();
-  const isFullscreen = usePlayerStore.use.isFullscreen();
-  const updatePlayerState = usePlayerStore.use.updatePlayerState();
+  const isPaused = usePlayerStore.use.isPaused()
+  const playlist = usePlayerStore.use.playlist()
+  const timePos = usePlayerStore.use.timePos()
+  const duration = usePlayerStore.use.duration()
+  const filename = usePlayerStore.use.filename()
+  const eofReached = usePlayerStore.use.eofReached()
+  const isFullscreen = usePlayerStore.use.isFullscreen()
+  const updatePlayerState = usePlayerStore.use.updatePlayerState()
 
-  const [playlistVisible, setPlaylistVisible] = useState(false);
+  const [playlistVisible, setPlaylistVisible] = useState(false)
 
   const handleLoadFile = async (folder = false) => {
     const file = await open({
       multiple: false,
       directory: folder,
-    });
+    })
 
     if (file) {
-      await loadFile(file);
+      await loadFile(file)
     }
-  };
+  }
 
   const toggleFullscreen = async () => {
-    await getCurrentWindow().setFullscreen(!isFullscreen);
-    updatePlayerState('isFullscreen', !isFullscreen);
-  };
+    await getCurrentWindow().setFullscreen(!isFullscreen)
+    updatePlayerState('isFullscreen', !isFullscreen)
+  }
 
   return (
     <div className="control">
@@ -54,9 +54,9 @@ const Controls = () => {
           onClick={isPaused
             ? async () => {
               if (filename && (duration - timePos < 0.5 || eofReached)) {
-                await seek(0);
+                await seek(0)
               };
-              play();
+              play()
             }
             : pause}
         >
@@ -93,8 +93,8 @@ const Controls = () => {
                 key={index}
                 className={`playlist-item ${item.current ? 'active' : ''}`}
                 onClick={() => {
-                  playlistPlay(index);
-                  setPlaylistVisible(false);
+                  playlistPlay(index)
+                  setPlaylistVisible(false)
                 }}
               >
                 {item.current ? '▶ ' : ''}{item.filename.split('/').pop()?.split('\\').pop()}
@@ -104,7 +104,7 @@ const Controls = () => {
         </div>
       }
     </div>
-  );
-};
+  )
+}
 
-export default Controls;
+export default Controls
