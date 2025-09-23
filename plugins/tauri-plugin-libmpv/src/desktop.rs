@@ -75,8 +75,8 @@ impl<R: Runtime> Mpv<R> {
                     info!("Initializing mpv instance for window '{}'...", window_label);
 
                     let mpv = libmpv2::Mpv::with_initializer(|init| {
-                        if let Some(properties) = mpv_config.initial_properties {
-                            for (key, value) in properties {
+                        if let Some(options) = mpv_config.initial_options {
+                            for (key, value) in options {
                                 match value {
                                     serde_json::Value::Bool(b) => init.set_option(&key, b)?,
                                     serde_json::Value::Number(n) => {
@@ -95,6 +95,25 @@ impl<R: Runtime> Mpv<R> {
                         }
 
                         init.set_option("wid", window_handle)?;
+
+                        if let Some(properties) = mpv_config.initial_properties {
+                            for (key, value) in properties {
+                                match value {
+                                    serde_json::Value::Bool(b) => init.set_property(&key, b)?,
+                                    serde_json::Value::Number(n) => {
+                                        if let Some(i) = n.as_i64() {
+                                            init.set_property(&key, i)?
+                                        } else if let Some(f) = n.as_f64() {
+                                            init.set_property(&key, f)?
+                                        }
+                                    }
+                                    serde_json::Value::String(s) => {
+                                        init.set_property(&key, s.as_str())?
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
 
                         Ok(())
                     })

@@ -21,11 +21,13 @@ const useMpv = () => {
   useEffect(() => {
     (async () => {
       const mpvConfig: MpvConfig = {
-        initialProperties: {
+        initialOptions: {
           'vo': 'gpu-next',
           'hwdec': 'auto-safe',
           'keep-open': 'yes',
           'force-window': 'yes',
+        },
+        initialProperties: {
           'pause': 'yes',
         },
         observedProperties: OBSERVED_PROPERTIES,
