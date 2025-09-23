@@ -1,10 +1,5 @@
 # Tauri Plugin mpv
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![npm version](https://img.shields.io/npm/v/tauri-plugin-mpv-api.svg)](https://www.npmjs.com/package/tauri-plugin-mpv-api)
-![NPM Downloads](https://img.shields.io/npm/d18m/tauri-plugin-mpv-api)
-[![Build Status](https://github.com/nini22P/tauri-plugin-mpv/actions/workflows/ci.yml/badge.svg)](https://github.com/nini22P/tauri-plugin-mpv/actions/workflows/ci.yml)
-
 A Tauri plugin to embed the mpv player in your app via JSON IPC.
 
 ## Installation
@@ -145,4 +140,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the LGPL-2.1 License - see the [LICENSE](LICENSE) file for details.
