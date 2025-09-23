@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { listen, UnlistenFn } from '@tauri-apps/api/event'
 
 import type {
   VideoMarginRatio,
@@ -10,9 +10,9 @@ import type {
   MpvFormatToType,
   MpvFormat,
   MpvObservableProperty,
-} from './types';
+} from './types'
 
-export * from './types';
+export * from './types'
 
 /**
  * Initialize mpv player.
@@ -35,12 +35,14 @@ export * from './types';
  * 
  * // mpv configuration
  * const mpvConfig: MpvConfig = {
+ *   initialOptions: {
+ *     'vo': 'gpu-next',
+ *     'hwdec': 'auto-safe',
+ *     'keep-open': 'yes',
+ *     'force-window': 'yes',
+ *   },
  *   initialProperties: {
- *     "vo": "gpu-next",
- *     "hwdec": "auto-safe",
- *     "keep-open": "yes",
- *     "force-window": "yes",
- *     "pause": "yes",
+ *     'pause': 'yes',
  *   },
  *   observedProperties: OBSERVED_PROPERTIES,
  * };
@@ -53,18 +55,18 @@ export async function init(
   mpvConfig?: MpvConfig,
   windowLabel?: string,
 ): Promise<string> {
-  const config = mpvConfig ?? {};
-  const winLabel = windowLabel ?? getCurrentWindow().label;
+  const config = mpvConfig ?? {}
+  const winLabel = windowLabel ?? getCurrentWindow().label
 
   const transformedConfig = {
     ...config,
     observedProperties: config.observedProperties ? Object.fromEntries(config.observedProperties) : {},
-  };
+  }
 
   return await invoke<string>('plugin:libmpv|init', {
     mpvConfig: transformedConfig,
     windowLabel: winLabel,
-  });
+  })
 }
 
 /**
@@ -82,12 +84,12 @@ export async function init(
  */
 export async function destroy(windowLabel?: string): Promise<void> {
   if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+    windowLabel = getCurrentWindow().label
   }
 
   return await invoke('plugin:libmpv|destroy', {
     windowLabel,
-  });
+  })
 }
 
 /**
@@ -139,18 +141,18 @@ export async function observeProperties<const T extends ReadonlyArray<MpvObserva
   windowLabel?: string
 ): Promise<UnlistenFn> {
 
-  const propertyNames = properties.map(p => p[0]);
+  const propertyNames = properties.map(p => p[0])
 
   return await listenEvents(
     (mpvEvent) => {
       if (mpvEvent.event === 'property-change') {
         if (mpvEvent.name && propertyNames.includes(mpvEvent.name)) {
-          callback(mpvEvent as MpvEventFromProperties<T[number]>);
+          callback(mpvEvent as MpvEventFromProperties<T[number]>)
         }
       }
     },
     windowLabel,
-  );
+  )
 }
 
 /**
@@ -178,12 +180,12 @@ export async function listenEvents(
 ): Promise<UnlistenFn> {
 
   if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+    windowLabel = getCurrentWindow().label
   }
 
-  const eventName = `mpv-event-${windowLabel}`;
+  const eventName = `mpv-event-${windowLabel}`
 
-  return await listen<MpvEvent>(eventName, (event) => callback(event.payload));
+  return await listen<MpvEvent>(eventName, (event) => callback(event.payload))
 }
 
 /**
@@ -221,14 +223,14 @@ export async function command(
 ) {
 
   if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+    windowLabel = getCurrentWindow().label
   }
 
   await invoke('plugin:libmpv|command', {
     name,
     args,
     windowLabel,
-  });
+  })
 }
 
 /**
@@ -261,14 +263,14 @@ export async function setProperty(
 ) {
 
   if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+    windowLabel = getCurrentWindow().label
   }
 
   await invoke('plugin:libmpv|set_property', {
     name,
     value,
     windowLabel,
-  });
+  })
 }
 
 /**
@@ -303,14 +305,14 @@ export async function getProperty<T extends MpvFormat>(
 ): Promise<MpvFormatToType[T]> {
 
   if (!windowLabel) {
-    windowLabel = getCurrentWindow().label;
+    windowLabel = getCurrentWindow().label
   }
 
   return await invoke<MpvFormatToType[T]>('plugin:libmpv|get_property', {
     name,
     format,
     windowLabel,
-  });
+  })
 }
 
 /**
@@ -347,12 +349,12 @@ export async function getProperty<T extends MpvFormat>(
 export async function setVideoMarginRatio(ratio: VideoMarginRatio, windowLabel?: string): Promise<void> {
 
   if (!windowLabel) {
-    const currentWindow = getCurrentWindow();
-    windowLabel = currentWindow.label;
+    const currentWindow = getCurrentWindow()
+    windowLabel = currentWindow.label
   }
 
   return await invoke<void>('plugin:libmpv|set_video_margin_ratio', {
     ratio,
     windowLabel,
-  });
+  })
 }

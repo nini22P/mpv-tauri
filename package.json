@@ -6,6 +6,15 @@
     "build:mpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-mpv-example tauri build",
     "build:libmpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-libmpv-example tauri build",
     "example:mpv": "pnpm build:plugins && cd examples/mpv-example && pnpm tauri dev",
-    "example:libmpv": "pnpm build:plugins && cd examples/libmpv-example && pnpm tauri dev"
+    "example:libmpv": "pnpm build:plugins && cd examples/libmpv-example && pnpm tauri dev",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.0",
+    "typescript-eslint": "^8.44.1"
   }
 }

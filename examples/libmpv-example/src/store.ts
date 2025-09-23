@@ -5,13 +5,19 @@ type WithSelectors<S> = S extends { getState: () => infer T }
   ? S & { use: { [K in keyof T]: () => T[K] } }
   : never
 
-const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
+export const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
   _store: S,
 ) => {
+  type State = ReturnType<S['getState']>
+
   const store = _store as WithSelectors<typeof _store>
   store.use = {}
-  for (const k of Object.keys(store.getState())) {
-    ; (store.use as any)[k] = () => store((s) => s[k as keyof typeof s])
+
+  const keys = Object.keys(store.getState()) as Array<keyof State>
+
+  for (const k of keys) {
+    const selector = () => store(s => (s as State)[k]);
+    (store.use as Record<keyof State, () => unknown>)[k] = selector
   }
 
   return store
@@ -63,6 +69,6 @@ const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) =
   updatePlayerState: (key, value) => set({ [key]: value }),
 }))
 
-const usePlayerStore = createSelectors(usePlayerStoreBase);
+const usePlayerStore = createSelectors(usePlayerStoreBase)
 
-export default usePlayerStore;
+export default usePlayerStore
