@@ -30,7 +30,7 @@ impl<R: Runtime> Mpv<R> {
     pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app = self.app.clone();
 
-        if let Some(webview_window) = app.get_webview_window(&window_label) {
+        if let Some(webview_window) = app.get_webview_window(window_label) {
             let handle_result = webview_window.window_handle();
 
             match handle_result {

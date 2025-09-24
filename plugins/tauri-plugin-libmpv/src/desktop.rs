@@ -43,7 +43,7 @@ impl<R: Runtime> Mpv<R> {
     pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app = self.app.clone();
 
-        if let Some(webview_window) = app.get_webview_window(&window_label) {
+        if let Some(webview_window) = app.get_webview_window(window_label) {
             let handle_result = webview_window.window_handle();
 
             match handle_result {
@@ -118,7 +118,7 @@ impl<R: Runtime> Mpv<R> {
 
                     info!("mpv instance initialized for window '{}'.", window_label,);
 
-                    let instance = MpvInstance { mpv: mpv };
+                    let instance = MpvInstance { mpv };
                     instances_lock.insert(window_label.to_string(), instance);
 
                     let app_handle = app.clone();
@@ -174,7 +174,7 @@ impl<R: Runtime> Mpv<R> {
                         "Failed to get raw window handle for window '{}': {:?}",
                         window_label, e
                     );
-                    return Err(crate::Error::WindowHandleError);
+                    Err(crate::Error::WindowHandleError)
                 }
             }
         } else {
@@ -182,7 +182,7 @@ impl<R: Runtime> Mpv<R> {
                 "Window with label '{}' not found. Please ensure the window exists.",
                 window_label
             );
-            return Err(crate::Error::WindowHandleError);
+            Err(crate::Error::WindowHandleError)
         }
     }
 
@@ -213,7 +213,7 @@ impl<R: Runtime> Mpv<R> {
                         window_label, e,
                     );
                     error!("{}", error_message);
-                    return Err(crate::Error::Mpv(error_message));
+                    Err(crate::Error::Mpv(error_message))
                 }
             }
         } else {
@@ -264,7 +264,7 @@ impl<R: Runtime> Mpv<R> {
 
             let args_as_slices: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
 
-            if let Err(e) = instance.mpv.command(&name, &args_as_slices) {
+            if let Err(e) = instance.mpv.command(name, &args_as_slices) {
                 let error_details = match e {
                     libmpv2::Error::Raw(code) => {
                         format!("{} ({})", mpv_error_code_to_name(code), code)

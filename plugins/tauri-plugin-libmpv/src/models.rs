@@ -191,7 +191,7 @@ impl<'a> From<libmpv2::events::Event<'a>> for SerializableMpvEvent {
                     prefix: prefix.to_string(),
                     level: level.to_string(),
                     text: text.to_string(),
-                    log_level: log_level,
+                    log_level,
                 }
             }
             libmpv2::events::Event::GetPropertyReply {

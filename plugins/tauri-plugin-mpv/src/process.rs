@@ -18,7 +18,7 @@ pub fn init_mpv_process<R: Runtime>(
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
-    let ipc_pipe = get_ipc_pipe(&window_label);
+    let ipc_pipe = get_ipc_pipe(window_label);
     let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms.unwrap_or(2000));
 
     let mut instances_lock = app.mpv().instances.lock().unwrap();
@@ -144,7 +144,7 @@ pub fn init_mpv_process<R: Runtime>(
 
             let instance = MpvInstance {
                 process: child,
-                ipc_timeout: ipc_timeout,
+                ipc_timeout,
             };
             instances_lock.insert(window_label.to_string(), instance);
 

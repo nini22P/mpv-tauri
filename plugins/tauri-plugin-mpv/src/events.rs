@@ -19,7 +19,7 @@ pub fn start_event_listener<R: Runtime>(
     observed_properties: Vec<String>,
     window_label: &str,
 ) {
-    let ipc_pipe = get_ipc_pipe(&window_label);
+    let ipc_pipe = get_ipc_pipe(window_label);
 
     let max_retries = 5;
     let mut retry_count = 0;
@@ -128,7 +128,7 @@ pub fn start_event_listener<R: Runtime>(
                                     let event_name = format!("mpv-event-{}", window_label);
 
                                     if let Err(e) =
-                                        app.emit_to(&window_label, &event_name, &payload)
+                                        app.emit_to(window_label, &event_name, &payload)
                                     {
                                         error!(
                                             "Failed to emit mpv event for mpv process (PID: {}) for window '{}': {}",
