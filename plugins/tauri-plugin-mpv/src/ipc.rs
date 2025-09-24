@@ -39,7 +39,7 @@ pub fn send_command(
         serde_json::to_string(&mpv_command).unwrap_or_default()
     );
 
-    let ipc_pipe = get_ipc_pipe(&window_label);
+    let ipc_pipe = get_ipc_pipe(window_label);
 
     #[cfg(windows)]
     {
