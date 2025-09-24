@@ -41,11 +41,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build:plugins": "pnpm --filter \"./plugins/*\" build",
-    "build:mpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-mpv-example tauri build",
-    "build:libmpv-examples": "pnpm build:plugins && pnpm --filter tauri-plugin-libmpv-example tauri build",
-    "example:mpv": "pnpm build:plugins && cd examples/mpv-example && pnpm tauri dev",
-    "example:libmpv": "pnpm build:plugins && cd examples/libmpv-example && pnpm tauri dev",
+    "build:plugin:mpv": "pnpm --filter ./plugins/tauri-plugin-mpv build",
+    "build:plugin:libmpv": "pnpm --filter ./plugins/tauri-plugin-libmpv build",
+    "build:example:mpv": "pnpm build:plugin:mpv && pnpm --filter tauri-plugin-mpv-example tauri build",
+    "build:example:libmpv": "pnpm build:plugin:libmpv && pnpm --filter tauri-plugin-libmpv-example tauri build",
+    "dev:example:mpv": "pnpm build:plugin:mpv && cd examples/mpv-example && pnpm tauri dev",
+    "dev:example:libmpv": "pnpm build:plugin:libmpv && cd examples/libmpv-example && pnpm tauri dev",
     "lint": "eslint ."
   },
   "devDependencies": {
