@@ -5,7 +5,6 @@ import pluginReact from 'eslint-plugin-react'
 import { defineConfig } from 'eslint/config'
 
 export default defineConfig([
-
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     plugins: { js },
@@ -37,6 +36,11 @@ export default defineConfig([
           'caughtErrorsIgnorePattern': '^_'
         }
       ],
+    },
+    settings: {
+      react: {
+        version: '19.1.1',
+      },
     },
   }
 ])

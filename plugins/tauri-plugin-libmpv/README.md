@@ -1,12 +1,12 @@
 # Tauri Plugin libmpv
 
-A Tauri plugin to embed the mpv player in your app via libmpv.
+A Tauri plugin for embedding the mpv player in your app via libmpv.
 
 ## Installation
 
 ### Prerequisites
 
-- Download the libmpv2 library and place it in `src-tauri`.
+- Setup libmpv development environment.
 - Tauri v2.x
 - Node.js 18+
 
@@ -62,13 +62,11 @@ const OBSERVED_PROPERTIES = [
 
 // mpv configuration
 const mpvConfig: MpvConfig = {
-  initialProperties: {
+  initialOptions: {
     'vo': 'gpu-next',
     'hwdec': 'auto-safe',
     'keep-open': 'yes',
     'force-window': 'yes',
-  },
-  initialProperties: {
     'pause': 'yes',
   },
   observedProperties: OBSERVED_PROPERTIES,
@@ -76,7 +74,6 @@ const mpvConfig: MpvConfig = {
 
 // Initialize mpv
 try {
-  console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES);
   await init(mpvConfig);
   console.log('mpv initialization completed successfully!');
 } catch (error) {
@@ -127,3 +124,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the LGPL-2.1 License - see the [LICENSE](LICENSE) file for details.
+
+This plugin utilizes the `libmpv2` and `libmpv2-sys` crate, which is also licensed under the **LGPL-2.1** license.

@@ -28,7 +28,7 @@ jobs:
         run: |
           npm install -g pnpm
           pnpm install
-          pnpm build:mpv-examples
+          pnpm build:example:mpv
         shell: pwsh
 
       - name: Upload artifact
@@ -76,7 +76,7 @@ jobs:
         run: |
           npm install -g pnpm
           pnpm install
-          pnpm build:libmpv-examples
+          pnpm build:example:libmpv
         shell: pwsh
 
       - name: Package runtime artifacts
