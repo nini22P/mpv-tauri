@@ -96,25 +96,6 @@ impl<R: Runtime> Mpv<R> {
 
                         init.set_option("wid", window_handle)?;
 
-                        if let Some(properties) = mpv_config.initial_properties {
-                            for (key, value) in properties {
-                                match value {
-                                    serde_json::Value::Bool(b) => init.set_property(&key, b)?,
-                                    serde_json::Value::Number(n) => {
-                                        if let Some(i) = n.as_i64() {
-                                            init.set_property(&key, i)?
-                                        } else if let Some(f) = n.as_f64() {
-                                            init.set_property(&key, f)?
-                                        }
-                                    }
-                                    serde_json::Value::String(s) => {
-                                        init.set_property(&key, s.as_str())?
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-
                         Ok(())
                     })
                     .map_err(|e| crate::Error::Initialization(e.to_string()))?;
