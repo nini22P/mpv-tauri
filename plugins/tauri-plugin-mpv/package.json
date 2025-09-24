@@ -2,7 +2,7 @@
   "name": "tauri-plugin-mpv-api",
   "version": "0.3.2",
   "author": "22",
-  "description": "A Tauri plugin to embed the mpv player in your app via JSON IPC.",
+  "description": "A Tauri plugin for embedding the mpv player in your app via JSON IPC.",
   "license": "LGPL-2.1",
   "type": "module",
   "homepage": "https://github.com/nini22P/mpv-tauri",

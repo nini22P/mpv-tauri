@@ -1,6 +1,6 @@
 # mpv-tauri
 
-A Tauri plugin to embed the mpv player in your app via JSON IPC or libmpv.
+Tauri plugins for embedding the mpv player in your app via JSON IPC or libmpv.
 
 ## Plugins
 
