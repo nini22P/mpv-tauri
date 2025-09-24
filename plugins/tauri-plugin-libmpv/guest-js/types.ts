@@ -14,7 +14,6 @@ export type MpvObservableProperty = readonly [string, MpvObservableFormat];
 
 export interface MpvConfig {
   initialOptions?: Record<string, string | boolean | number>;
-  initialProperties?: Record<string, string | boolean | number>;
   observedProperties?: readonly MpvObservableProperty[];
 }
 

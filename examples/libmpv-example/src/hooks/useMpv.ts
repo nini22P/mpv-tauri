@@ -26,8 +26,6 @@ const useMpv = () => {
           'hwdec': 'auto-safe',
           'keep-open': 'yes',
           'force-window': 'yes',
-        },
-        initialProperties: {
           'pause': 'yes',
         },
         observedProperties: OBSERVED_PROPERTIES,
