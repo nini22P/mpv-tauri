@@ -23,8 +23,6 @@ export const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
   return store
 }
 
-export type Connection = 'pending' | 'connected' | 'error';
-
 export interface MpvPlaylistItem {
   filename: string;
   playing?: boolean;
@@ -35,7 +33,7 @@ export interface MpvPlaylistItem {
 }
 
 export interface PlayerStoreState {
-  connection: Connection;
+  isInitalized: boolean;
   isPaused: boolean;
   playlist: MpvPlaylistItem[];
   filename: string | undefined;
@@ -54,7 +52,7 @@ export interface PlayerStroeActions {
 }
 
 const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) => ({
-  connection: 'pending',
+  isInitalized: false,
   isPaused: true,
   filename: undefined,
   playlist: [],

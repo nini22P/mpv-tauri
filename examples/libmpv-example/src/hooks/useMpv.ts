@@ -35,10 +35,9 @@ const useMpv = () => {
         console.log('Initializing mpv with properties:', OBSERVED_PROPERTIES)
         await init(mpvConfig)
         console.log('mpv initialization completed successfully!')
-        updatePlayerState('connection', 'connected')
+        updatePlayerState('isInitalized', true)
       } catch (error) {
         console.error('mpv initialization failed:', error)
-        updatePlayerState('connection', 'error')
       }
     })()
   }, [])
