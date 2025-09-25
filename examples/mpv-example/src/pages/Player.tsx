@@ -18,12 +18,6 @@ const Player = ({ source }: { source: string | null }) => {
   const isFullscreen = usePlayerStore.use.isFullscreen()
 
   useEffect(() => {
-    if (connection === 'connected') {
-      showControls()
-    }
-  }, [connection])
-
-  useEffect(() => {
     if (connection === 'connected' && source) {
       loadFile(source)
     }

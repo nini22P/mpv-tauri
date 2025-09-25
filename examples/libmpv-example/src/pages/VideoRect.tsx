@@ -1,16 +1,15 @@
 import { useEffect, useRef } from 'react'
 import './VideoRect.css'
 import { setVideoMarginRatio, VideoMarginRatio } from 'tauri-plugin-libmpv-api'
-import { Connection } from '../store'
 
-const VideoRect = ({ connection }: { connection: Connection }) => {
+const VideoRect = ({ isInitalized }: { isInitalized: boolean }) => {
   const videoRectRef = useRef<HTMLDivElement>(null)
   const prevRatioRef = useRef<VideoMarginRatio>({ left: 0, right: 0, top: 0, bottom: 0 })
 
   useEffect(() => {
     const videoRect = videoRectRef.current
 
-    if (!videoRect || connection !== 'connected') return
+    if (!videoRect || !isInitalized) return
 
     const updateRatio = async () => {
       const rect = videoRect.getBoundingClientRect()
@@ -51,12 +50,10 @@ const VideoRect = ({ connection }: { connection: Connection }) => {
     return () => {
       resizeObserver.disconnect()
     }
-  }, [connection])
+  }, [isInitalized])
 
   return (
-    <div ref={videoRectRef} className="video-rect">
-      {connection === 'error' && 'mpv connection timeout. Is mpv installed and in your PATH?'}
-    </div>
+    <div ref={videoRectRef} className="video-rect" />
   )
 }
 

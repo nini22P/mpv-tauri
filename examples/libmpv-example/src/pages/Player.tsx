@@ -13,29 +13,27 @@ const Player = ({ source }: { source: string | null }) => {
 
   const { visible, show: showControls, hide: hideControls } = useAutoHide(5000)
 
-  const connection = usePlayerStore.use.connection()
+  const isInitalized = usePlayerStore.use.isInitalized()
   const filename = usePlayerStore.use.filename()
   const isFullscreen = usePlayerStore.use.isFullscreen()
 
   useEffect(() => {
-    if (connection === 'connected') {
-      showControls()
-    }
-  }, [connection])
-
-  useEffect(() => {
-    if (connection === 'connected' && source) {
+    if (isInitalized && source) {
       loadFile(source)
     }
-  }, [connection, source])
+  }, [isInitalized, source])
 
   useEffect(() => {
     getCurrentWindow().setTitle(filename ? `${filename} - tauri-plugin-libmpv-example` : 'tauri-plugin-libmpv-example')
   }, [filename])
 
   return (
-    <div className="player" onMouseMove={showControls} onMouseLeave={hideControls}>
-      <VideoRect connection={connection} />
+    <div
+      className="player"
+      onMouseMove={showControls}
+      onMouseLeave={hideControls}
+    >
+      <VideoRect isInitalized={isInitalized} />
       {
         isFullscreen
           ? visible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
