@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-mpv"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["22"]
 description = "A Tauri plugin for embedding the mpv player in your app via JSON IPC."
 edition = "2021"
