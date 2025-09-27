@@ -4232,7 +4232,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-libmpv"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "libmpv2",
  "libmpv2-sys",

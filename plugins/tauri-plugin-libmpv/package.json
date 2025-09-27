@@ -1,6 +1,6 @@
 {
   "name": "tauri-plugin-libmpv-api",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "22",
   "description": "A Tauri plugin for embedding the libmpv player in your app via libmpv.",
   "license": "LGPL-2.1",
