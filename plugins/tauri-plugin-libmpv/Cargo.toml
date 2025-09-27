@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-libmpv"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["22"]
 description = "A Tauri plugin for embedding the mpv player in your app via libmpv."
 edition = "2021"

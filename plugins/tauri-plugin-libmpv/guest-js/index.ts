@@ -40,7 +40,6 @@ export * from './types'
  *     'hwdec': 'auto-safe',
  *     'keep-open': 'yes',
  *     'force-window': 'yes',
- *     'pause': 'yes',
  *   },
  *   observedProperties: OBSERVED_PROPERTIES,
  * };
