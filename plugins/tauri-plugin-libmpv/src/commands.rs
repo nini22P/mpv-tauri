@@ -9,9 +9,9 @@ use crate::VideoMarginRatio;
 pub(crate) async fn init<R: Runtime>(
     app: AppHandle<R>,
     mpv_config: MpvConfig,
-    window_label: &str,
+    window_label: String,
 ) -> Result<String> {
-    app.mpv().init(mpv_config, window_label)
+    app.mpv().init(mpv_config, &window_label)
 }
 
 #[command]

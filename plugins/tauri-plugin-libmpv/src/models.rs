@@ -1,15 +1,41 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 pub struct MpvInstance {
-    pub mpv: libmpv2::Mpv,
+    pub mpv: Arc<Mutex<libmpv2::Mpv>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MpvIntegration {
+    Wid,
+    Render,
+}
+
+impl Default for MpvIntegration {
+    fn default() -> Self {
+        MpvIntegration::Render
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MpvConfig {
-    pub initial_options: Option<HashMap<String, serde_json::Value>>,
-    pub observed_properties: Option<HashMap<String, String>>,
+    #[serde(default)]
+    pub integration_mode: MpvIntegration,
+    #[serde(default)]
+    pub initial_options: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub observed_properties: HashMap<String, String>,
+}
+
+#[derive(Debug)]
+pub enum MpvThreadEvent {
+    Redraw,
+    MpvEvents,
 }
 
 pub struct MpvNode(serde_json::Value);
