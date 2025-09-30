@@ -679,7 +679,7 @@ fn start_render_thread<R: Runtime>(
 
     if init_tx.send(Ok(())).is_err() {
         info!(
-            "Parent thread disconnected. Aborting render thread for '{}'.",
+            "Parent thread disconnected. Aborting render thread for window '{}'.",
             window_label
         );
         return Ok(());
@@ -689,7 +689,7 @@ fn start_render_thread<R: Runtime>(
 
     mpv.lock()
         .unwrap()
-        .observe_property("idle-active", libmpv2::Format::Flag, 0)?;
+        .observe_property("playlist-pos", libmpv2::Format::Int64, 0)?;
 
     for event in event_rx {
         match event {
@@ -716,9 +716,9 @@ fn start_render_thread<R: Runtime>(
                     match mpv_event {
                         Ok(libmpv2::events::Event::PropertyChange { name, change, .. }) => {
                             match name {
-                                "idle-active" => {
-                                    if let libmpv2::events::PropertyData::Flag(idle) = change {
-                                        if idle {
+                                "playlist-pos" => {
+                                    if let libmpv2::events::PropertyData::Int64(pos) = change {
+                                        if pos == -1 {
                                             should_render = false;
                                             clear_surface(&display, &surface, &current_context);
                                         }
@@ -730,19 +730,13 @@ fn start_render_thread<R: Runtime>(
                         Ok(libmpv2::events::Event::StartFile) => {
                             should_render = true;
                         }
-                        Ok(libmpv2::events::Event::EndFile(reason)) => match reason {
-                            libmpv2::mpv_end_file_reason::Eof => {}
-                            libmpv2::mpv_end_file_reason::Stop => {}
-                            _ => {
-                                should_render = false;
-                                clear_surface(&display, &surface, &current_context);
-                            }
-                        },
+                        Ok(libmpv2::events::Event::EndFile(_)) => {}
                         Ok(libmpv2::events::Event::Shutdown) => {
-                            info!("Shutdown event received, exiting render thread.");
+                            info!(
+                                "Shutdown event received, exiting render thread for window '{}'.",
+                                window_label
+                            );
 
-                            should_render = false;
-                            let _ = should_render;
                             clear_surface(&display, &surface, &current_context);
 
                             drop(current_context);
