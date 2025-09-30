@@ -10,6 +10,7 @@ use std::ffi::{c_void, CString};
 use std::num::NonZeroU32;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 use tauri::{Emitter, WebviewWindow};
 
@@ -138,7 +139,7 @@ impl<R: Runtime> Mpv<R> {
         let mut initial_options = mpv_config.initial_options.clone();
         initial_options.insert("wid".to_string(), serde_json::json!(wid));
 
-        let mpv = Arc::new(Mutex::new(self.create_mpv_instance(initial_options)?));
+        let mpv = Arc::new(Mutex::new(create_mpv_instance(initial_options)?));
 
         let mpv_clone = mpv.clone();
 
@@ -177,45 +178,10 @@ impl<R: Runtime> Mpv<R> {
             return Ok(window_label.to_string());
         }
 
-        let mut gl_displays_lock = self.app.mpv().gl_displays.lock().unwrap();
-        if gl_displays_lock.contains_key(window_label) {
-            info!(
-                "gl display for window '{}' already exists. Skipping initialization.",
-                window_label
-            );
-            return Ok(window_label.to_string());
-        }
-
-        let window = self
-            .app
-            .get_webview_window(window_label)
-            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
-        let window_handle = window.window_handle()?;
-        let raw_window_handle = window_handle.as_raw();
-        let display_handle = window.display_handle()?;
-
-        let surface_attributes = window.build_surface_attributes(Default::default()).unwrap();
-
-        let template = glutin::config::ConfigTemplateBuilder::new()
-            .compatible_with_native_window(raw_window_handle);
-
-        let gl_display = Arc::new(unsafe {
-            let preference = DisplayApiPreference::WglThenEgl(Some(window_handle.as_raw()));
-            match glutin::display::Display::new(display_handle.as_raw(), preference) {
-                Ok(display) => display,
-                Err(e) => {
-                    error!("Failed to create glutin display: {}", e);
-                    return Err(crate::Error::UnsupportedPlatform);
-                }
-            }
-        });
-
-        gl_displays_lock.insert(window_label.to_string(), gl_display.clone());
-
         let mut initial_options = mpv_config.initial_options.clone();
         initial_options.insert("vo".to_string(), serde_json::json!("libmpv"));
 
-        let mpv = Arc::new(Mutex::new(self.create_mpv_instance(initial_options)?));
+        let mpv = Arc::new(Mutex::new(create_mpv_instance(initial_options)?));
 
         let mpv_clone = mpv.clone();
 
@@ -240,131 +206,29 @@ impl<R: Runtime> Mpv<R> {
 
         start_event_loop(self.app.clone(), mpv_client, window_label.to_string());
 
-        let gl_config = unsafe {
-            gl_display
-                .find_configs(template.build())
-                .unwrap()
-                .next()
-                .expect("No suitable config found")
-        };
+        let app = self.app.clone();
+        let window_label_clone = window_label.to_string();
 
-        let gl_surface = unsafe {
-            gl_display
-                .create_window_surface(&gl_config, &surface_attributes)
-                .expect("Failed to create window surface")
-        };
-
-        let context_attributes =
-            glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
-
-        let gl_context = unsafe {
-            gl_display
-                .create_context(&gl_config, &context_attributes)
-                .expect("Failed to create context")
-        };
-
-        let current_context = gl_context
-            .make_current(&gl_surface)
-            .expect("Failed to make context current");
-
-        let mut render_context = match RenderContext::new(
-            unsafe { mpv_clone.lock().unwrap().ctx.as_mut() },
-            vec![
-                RenderParam::ApiType(RenderParamApiType::OpenGl),
-                RenderParam::InitParams(OpenGLInitParams {
-                    get_proc_address,
-                    ctx: gl_display.clone(),
-                }),
-            ],
-        ) {
-            Ok(ctx) => ctx,
-            Err(e) => {
-                error!("Failed to create render context: {}", e);
-                return Err(crate::Error::Initialization(e.to_string()));
+        thread::spawn(move || {
+            if let Err(e) = start_render_thread(app, mpv_clone, &window_label_clone) {
+                error!("Render thread exited with error: {}", e);
             }
-        };
-
-        let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
-
-        let redraw_tx: mpsc::Sender<MpvThreadEvent> = event_tx.clone();
-        render_context.set_update_callback(move || {
-            redraw_tx.send(MpvThreadEvent::Redraw).ok();
         });
 
-        mpv_clone.lock().unwrap().set_wakeup_callback(move || {
-            event_tx.send(MpvThreadEvent::MpvEvents).ok();
-        });
-
-        for event in event_rx {
-            match event {
-                MpvThreadEvent::Redraw => {
-                    if let Ok(size) = window.inner_size() {
-                        if let Err(e) = render_context.render::<Arc<glutin::display::Display>>(
-                            0,
-                            size.width as _,
-                            size.height as _,
-                            true,
-                        ) {
-                            error!("Failed to render frame: {}", e);
-                        }
-                    }
-
-                    gl_surface
-                        .swap_buffers(&current_context)
-                        .expect("Failed to swap buffers");
-                }
-                MpvThreadEvent::MpvEvents => {
-                    while let Some(mpv_event) = mpv_clone.lock().unwrap().wait_event(0.0) {
-                        match mpv_event {
-                            Ok(libmpv2::events::Event::EndFile(_)) => {
-                                error!("End of file, exiting render thread.");
-                                return Ok(window_label.to_string());
-                            }
-                            Ok(e) => {
-                                println!("Received MPV Event: {:?}", e);
-                            }
-                            Err(e) => {
-                                error!("MPV event error: {}", e);
-                                return Err(crate::Error::Mpv(e.to_string()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        info!(
-            "mpv instance fully initialized for window '{}'.",
-            window_label
-        );
         Ok(window_label.to_string())
     }
 
-    fn create_mpv_instance(
-        &self,
-        initial_options: HashMap<String, serde_json::Value>,
-    ) -> Result<libmpv2::Mpv> {
-        libmpv2::Mpv::with_initializer(|init| {
-            for (key, value) in initial_options {
-                match value {
-                    serde_json::Value::Bool(b) => init.set_option(&key, b)?,
-                    serde_json::Value::Number(n) => {
-                        if let Some(i) = n.as_i64() {
-                            init.set_option(&key, i)?
-                        } else if let Some(f) = n.as_f64() {
-                            init.set_option(&key, f)?
-                        }
-                    }
-                    serde_json::Value::String(s) => init.set_option(&key, s.as_str())?,
-                    _ => {}
-                }
-            }
-            Ok(())
-        })
-        .map_err(|e| crate::Error::Initialization(e.to_string()))
-    }
-
     pub fn destroy(&self, window_label: &str) -> Result<()> {
+        {
+            let mut gl_displays_lock = match self.app.mpv().gl_displays.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    warn!("Mutex for gl displays was poisoned. Recovering.");
+                    poisoned.into_inner()
+                }
+            };
+            gl_displays_lock.remove(window_label);
+        }
         let instance_to_kill = {
             let mut instances_lock = match self.app.mpv().instances.lock() {
                 Ok(guard) => guard,
@@ -646,6 +510,170 @@ impl<R: Runtime> Mpv<R> {
         }
         Ok(())
     }
+}
+
+fn start_render_thread<R: Runtime>(
+    app: AppHandle<R>,
+    mpv: Arc<Mutex<libmpv2::Mpv>>,
+    window_label: &str,
+) -> Result<()> {
+    let mut gl_displays_lock = app.mpv().gl_displays.lock().unwrap();
+    if gl_displays_lock.contains_key(window_label) {
+        info!(
+            "gl display for window '{}' already exists. Skipping initialization.",
+            window_label
+        );
+        return Ok(());
+    }
+
+    let window = app
+        .get_webview_window(window_label)
+        .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+    let window_handle = window.window_handle()?;
+    let raw_window_handle = window_handle.as_raw();
+    let display_handle = window.display_handle()?;
+
+    let surface_attributes = window.build_surface_attributes(Default::default()).unwrap();
+
+    let template = glutin::config::ConfigTemplateBuilder::new()
+        .compatible_with_native_window(raw_window_handle);
+
+    let gl_display = Arc::new(unsafe {
+        let preference = DisplayApiPreference::WglThenEgl(Some(window_handle.as_raw()));
+        match glutin::display::Display::new(display_handle.as_raw(), preference) {
+            Ok(display) => display,
+            Err(e) => {
+                error!("Failed to create glutin display: {}", e);
+                return Err(crate::Error::UnsupportedPlatform);
+            }
+        }
+    });
+
+    gl_displays_lock.insert(window_label.to_string(), gl_display.clone());
+
+    drop(gl_displays_lock);
+
+    let gl_config = unsafe {
+        gl_display
+            .find_configs(template.build())
+            .unwrap()
+            .next()
+            .expect("No suitable config found")
+    };
+
+    let gl_surface = unsafe {
+        gl_display
+            .create_window_surface(&gl_config, &surface_attributes)
+            .expect("Failed to create window surface")
+    };
+
+    let context_attributes =
+        glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
+
+    let gl_context = unsafe {
+        gl_display
+            .create_context(&gl_config, &context_attributes)
+            .expect("Failed to create context")
+    };
+
+    let current_context = gl_context
+        .make_current(&gl_surface)
+        .expect("Failed to make context current");
+
+    let mut render_context = match RenderContext::new(
+        unsafe { mpv.lock().unwrap().ctx.as_mut() },
+        vec![
+            RenderParam::ApiType(RenderParamApiType::OpenGl),
+            RenderParam::InitParams(OpenGLInitParams {
+                get_proc_address,
+                ctx: gl_display.clone(),
+            }),
+        ],
+    ) {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            error!("Failed to create render context: {}", e);
+            return Err(crate::Error::Initialization(e.to_string()));
+        }
+    };
+
+    let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
+
+    let redraw_tx: mpsc::Sender<MpvThreadEvent> = event_tx.clone();
+    render_context.set_update_callback(move || {
+        redraw_tx.send(MpvThreadEvent::Redraw).ok();
+    });
+
+    mpv.lock().unwrap().set_wakeup_callback(move || {
+        event_tx.send(MpvThreadEvent::MpvEvents).ok();
+    });
+
+    for event in event_rx {
+        match event {
+            MpvThreadEvent::Redraw => {
+                if let Ok(size) = window.inner_size() {
+                    if let Err(e) = render_context.render::<Arc<glutin::display::Display>>(
+                        0,
+                        size.width as _,
+                        size.height as _,
+                        true,
+                    ) {
+                        error!("Failed to render frame: {}", e);
+                    }
+                }
+
+                gl_surface
+                    .swap_buffers(&current_context)
+                    .expect("Failed to swap buffers");
+            }
+            MpvThreadEvent::MpvEvents => {
+                while let Some(mpv_event) = mpv.lock().unwrap().wait_event(0.0) {
+                    match mpv_event {
+                        Ok(libmpv2::events::Event::EndFile(_)) => {
+                            trace!("End of file, exiting render thread.");
+                            return Ok(());
+                        }
+                        Ok(libmpv2::events::Event::Shutdown) => {
+                            info!("Shutdown event received, exiting render thread.");
+                            return Ok(());
+                        }
+                        Ok(_e) => {
+                            // println!("Received mpv event: {:?}", e);
+                        }
+                        Err(e) => {
+                            error!("mpv event error: {}", e);
+                            return Err(crate::Error::Mpv(e.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn create_mpv_instance(
+    initial_options: HashMap<String, serde_json::Value>,
+) -> Result<libmpv2::Mpv> {
+    libmpv2::Mpv::with_initializer(|init| {
+        for (key, value) in initial_options {
+            match value {
+                serde_json::Value::Bool(b) => init.set_option(&key, b)?,
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        init.set_option(&key, i)?
+                    } else if let Some(f) = n.as_f64() {
+                        init.set_option(&key, f)?
+                    }
+                }
+                serde_json::Value::String(s) => init.set_option(&key, s.as_str())?,
+                _ => {}
+            }
+        }
+        Ok(())
+    })
+    .map_err(|e| crate::Error::Initialization(e.to_string()))
 }
 
 fn start_event_loop<R: Runtime>(
