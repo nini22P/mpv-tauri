@@ -16,11 +16,13 @@ const OBSERVED_PROPERTIES = [
 
 const useMpv = () => {
 
+  const integrationMode = usePlayerStore.use.integrationMode()
   const updatePlayerState = usePlayerStore.use.updatePlayerState()
 
   useEffect(() => {
     (async () => {
       const mpvConfig: MpvConfig = {
+        integrationMode,
         initialOptions: {
           'vo': 'gpu-next',
           'hwdec': 'auto-safe',
@@ -39,8 +41,16 @@ const useMpv = () => {
       } catch (error) {
         console.error('mpv initialization failed:', error)
       }
+
     })()
-  }, [])
+
+    return () => {
+      (async () => {
+        await destroy()
+        updatePlayerState('isInitalized', false)
+      })()
+    }
+  }, [integrationMode])
 
   useEffect(() => {
     const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroy()
@@ -106,7 +116,7 @@ const useMpv = () => {
     return () => {
       unlistenPromise.then(unlisten => unlisten())
     }
-  }, [])
+  }, [OBSERVED_PROPERTIES])
 }
 
 export default useMpv
