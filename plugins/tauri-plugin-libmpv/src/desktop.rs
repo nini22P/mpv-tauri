@@ -52,7 +52,13 @@ impl<R: Runtime> Mpv<R> {
     }
 
     fn init_wid_mode(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        let mut instances_lock = self.app.mpv().instances.lock().unwrap();
+        let mut instances_lock = match self.app.mpv().instances.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex was poisoned, recovering.");
+                poisoned.into_inner()
+            }
+        };
 
         if instances_lock.contains_key(window_label) {
             info!(
@@ -105,7 +111,13 @@ impl<R: Runtime> Mpv<R> {
     }
 
     fn init_render_mode(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        let mut instances_lock = self.app.mpv().instances.lock().unwrap();
+        let mut instances_lock = match self.app.mpv().instances.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex was poisoned, recovering.");
+                poisoned.into_inner()
+            }
+        };
 
         if instances_lock.contains_key(window_label) {
             info!(
@@ -193,7 +205,14 @@ impl<R: Runtime> Mpv<R> {
         };
 
         if let Some(instance) = instance_to_kill {
-            match instance.mpv.lock().unwrap().command("quit", &[]) {
+            let mpv = match instance.mpv.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    warn!("Mutex for mpv instance was poisoned. Recovering.");
+                    poisoned.into_inner()
+                }
+            };
+            match mpv.command("quit", &[]) {
                 Ok(_) => {
                     info!(
                         "mpv instance for window '{}' destroyed successfully.",
@@ -551,7 +570,13 @@ fn start_render_thread<R: Runtime>(
     init_tx: mpsc::Sender<Result<()>>,
 ) -> Result<()> {
     let setup_result = (|| -> Result<Option<(_, _, _, _, _, _)>> {
-        let mut render_contexts_lock = app.mpv().render_contexts.lock().unwrap();
+        let mut render_contexts_lock = match app.mpv().render_contexts.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex for render contexts was poisoned. Recovering.");
+                poisoned.into_inner()
+            }
+        };
         if render_contexts_lock.contains_key(window_label) {
             info!(
                 "display for window '{}' already exists. Skipping initialization.",
@@ -586,9 +611,13 @@ fn start_render_thread<R: Runtime>(
         let config = unsafe {
             display
                 .find_configs(template.build())
-                .unwrap()
+                .map_err(|e| {
+                    crate::Error::Initialization(format!("Failed to find GL configs: {}", e))
+                })?
                 .next()
-                .expect("No suitable config found")
+                .ok_or_else(|| {
+                    crate::Error::Initialization("No suitable GL config found".to_string())
+                })?
         };
 
         let surface = unsafe {
@@ -775,8 +804,9 @@ fn clear_surface(
 ) {
     trace!("Clearing surface.");
     unsafe {
-        let gl = glow::Context::from_loader_function(|s| {
-            display.get_proc_address(&CString::new(s).unwrap()) as *const _
+        let gl = glow::Context::from_loader_function(|s| match CString::new(s) {
+            Ok(c_str) => display.get_proc_address(&c_str) as *const _,
+            Err(_) => std::ptr::null(),
         });
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
         gl.clear(glow::COLOR_BUFFER_BIT);

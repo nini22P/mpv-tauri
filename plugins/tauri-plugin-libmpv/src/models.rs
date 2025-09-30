@@ -46,9 +46,9 @@ impl<R: Runtime> GlWindow for WebviewWindow<R> {
     > {
         let (w, h) = self
             .inner_size()
-            .unwrap()
+            .map_err(|_| raw_window_handle::HandleError::Unavailable)?
             .non_zero()
-            .expect("invalid zero inner size");
+            .ok_or(raw_window_handle::HandleError::Unavailable)?;
         let handle = self.window_handle()?.as_raw();
         Ok(builder.build(handle, w, h))
     }

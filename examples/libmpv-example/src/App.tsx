@@ -4,7 +4,6 @@ import Player from './pages/Player'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import usePlayerStore from './store'
-import { stop } from './utils/commands'
 
 function App() {
   const source = useCli()
