@@ -21,6 +21,9 @@ const useMpv = () => {
 
   useEffect(() => {
     (async () => {
+      await destroy()
+      updatePlayerState('isInitalized', false)
+
       const mpvConfig: MpvConfig = {
         integrationMode,
         initialOptions: {
@@ -43,22 +46,7 @@ const useMpv = () => {
       }
 
     })()
-
-    return () => {
-      (async () => {
-        await destroy()
-        updatePlayerState('isInitalized', false)
-      })()
-    }
   }, [integrationMode])
-
-  useEffect(() => {
-    const handleBeforeUnload = (_event: BeforeUnloadEvent) => destroy()
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [])
 
   useEffect(() => {
     const unlistenPromise = listenEvents(

@@ -43,12 +43,6 @@ const useMpv = () => {
         updatePlayerState('connection', 'error')
       }
     })()
-    return () => {
-      (async () => {
-        await destroy()
-        updatePlayerState('connection', 'pending')
-      })()
-    }
   }, [])
 
   useEffect(() => {
