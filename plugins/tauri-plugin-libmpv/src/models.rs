@@ -1,11 +1,69 @@
+use glutin::surface::WindowSurface;
+use raw_window_handle::HasWindowHandle;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    num::NonZeroU32,
     sync::{Arc, Mutex},
 };
+use tauri::{Runtime, WebviewWindow};
 
 pub struct MpvInstance {
     pub mpv: Arc<Mutex<libmpv2::Mpv>>,
+}
+
+pub struct RenderContext {
+    pub ctx: Arc<Mutex<libmpv2::render::RenderContext>>,
+}
+
+unsafe impl Send for RenderContext {}
+
+impl RenderContext {
+    pub fn new(ctx: libmpv2::render::RenderContext) -> Self {
+        Self {
+            ctx: Arc::new(Mutex::new(ctx)),
+        }
+    }
+}
+
+pub trait GlWindow {
+    fn build_surface_attributes(
+        &self,
+        builder: glutin::surface::SurfaceAttributesBuilder<WindowSurface>,
+    ) -> std::result::Result<
+        glutin::surface::SurfaceAttributes<WindowSurface>,
+        raw_window_handle::HandleError,
+    >;
+}
+
+impl<R: Runtime> GlWindow for WebviewWindow<R> {
+    fn build_surface_attributes(
+        &self,
+        builder: glutin::surface::SurfaceAttributesBuilder<WindowSurface>,
+    ) -> std::result::Result<
+        glutin::surface::SurfaceAttributes<WindowSurface>,
+        raw_window_handle::HandleError,
+    > {
+        let (w, h) = self
+            .inner_size()
+            .unwrap()
+            .non_zero()
+            .expect("invalid zero inner size");
+        let handle = self.window_handle()?.as_raw();
+        Ok(builder.build(handle, w, h))
+    }
+}
+
+trait NonZeroU32PhysicalSize {
+    fn non_zero(self) -> Option<(NonZeroU32, NonZeroU32)>;
+}
+
+impl NonZeroU32PhysicalSize for winit::dpi::PhysicalSize<u32> {
+    fn non_zero(self) -> Option<(NonZeroU32, NonZeroU32)> {
+        let w = NonZeroU32::new(self.width)?;
+        let h = NonZeroU32::new(self.height)?;
+        Some((w, h))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -17,7 +75,7 @@ pub enum MpvIntegration {
 
 impl Default for MpvIntegration {
     fn default() -> Self {
-        MpvIntegration::Render
+        MpvIntegration::Wid
     }
 }
 
@@ -29,13 +87,35 @@ pub struct MpvConfig {
     #[serde(default)]
     pub initial_options: HashMap<String, serde_json::Value>,
     #[serde(default)]
-    pub observed_properties: HashMap<String, String>,
+    pub observed_properties: HashMap<String, MpvFormat>,
 }
 
 #[derive(Debug)]
 pub enum MpvThreadEvent {
     Redraw,
     MpvEvents,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MpvFormat {
+    String,
+    Flag,
+    Int64,
+    Double,
+    Node,
+}
+
+impl From<MpvFormat> for libmpv2::Format {
+    fn from(format: MpvFormat) -> Self {
+        match format {
+            MpvFormat::String => libmpv2::Format::String,
+            MpvFormat::Flag => libmpv2::Format::Flag,
+            MpvFormat::Int64 => libmpv2::Format::Int64,
+            MpvFormat::Double => libmpv2::Format::Double,
+            MpvFormat::Node => libmpv2::Format::Node,
+        }
+    }
 }
 
 pub struct MpvNode(serde_json::Value);

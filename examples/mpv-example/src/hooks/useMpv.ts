@@ -43,6 +43,12 @@ const useMpv = () => {
         updatePlayerState('connection', 'error')
       }
     })()
+    return () => {
+      (async () => {
+        await destroy()
+        updatePlayerState('connection', 'pending')
+      })()
+    }
   }, [])
 
   useEffect(() => {
@@ -96,7 +102,7 @@ const useMpv = () => {
     return () => {
       unlistenPromise.then(unlisten => unlisten())
     }
-  }, [])
+  }, [OBSERVED_PROPERTIES])
 }
 
 export default useMpv

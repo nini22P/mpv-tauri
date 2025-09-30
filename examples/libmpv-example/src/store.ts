@@ -33,6 +33,7 @@ export interface MpvPlaylistItem {
 }
 
 export interface PlayerStoreState {
+  integrationMode: 'wid' | 'render';
   isInitalized: boolean;
   isPaused: boolean;
   playlist: MpvPlaylistItem[];
@@ -52,6 +53,7 @@ export interface PlayerStroeActions {
 }
 
 const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) => ({
+  integrationMode: 'wid',
   isInitalized: false,
   isPaused: true,
   filename: undefined,
