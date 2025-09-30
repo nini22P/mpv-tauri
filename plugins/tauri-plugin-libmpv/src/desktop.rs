@@ -93,7 +93,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     let mpv = Mpv {
         app: app.clone(),
         instances: Mutex::new(HashMap::new()),
-        gl_displays: Mutex::new(HashMap::new()),
+        displays: Mutex::new(HashMap::new()),
     };
     Ok(mpv)
 }
@@ -101,7 +101,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mpv<R: Runtime> {
     app: AppHandle<R>,
     pub instances: Mutex<HashMap<String, MpvInstance>>,
-    pub gl_displays: Mutex<HashMap<String, Arc<glutin::display::Display>>>,
+    pub displays: Mutex<HashMap<String, Arc<glutin::display::Display>>>,
 }
 
 impl<R: Runtime> Mpv<R> {
@@ -220,14 +220,14 @@ impl<R: Runtime> Mpv<R> {
 
     pub fn destroy(&self, window_label: &str) -> Result<()> {
         {
-            let mut gl_displays_lock = match self.app.mpv().gl_displays.lock() {
+            let mut displays_lock = match self.app.mpv().displays.lock() {
                 Ok(guard) => guard,
                 Err(poisoned) => {
                     warn!("Mutex for gl displays was poisoned. Recovering.");
                     poisoned.into_inner()
                 }
             };
-            gl_displays_lock.remove(window_label);
+            displays_lock.remove(window_label);
         }
         let instance_to_kill = {
             let mut instances_lock = match self.app.mpv().instances.lock() {
@@ -517,8 +517,8 @@ fn start_render_thread<R: Runtime>(
     mpv: Arc<Mutex<libmpv2::Mpv>>,
     window_label: &str,
 ) -> Result<()> {
-    let mut gl_displays_lock = app.mpv().gl_displays.lock().unwrap();
-    if gl_displays_lock.contains_key(window_label) {
+    let mut displays_lock = app.mpv().displays.lock().unwrap();
+    if displays_lock.contains_key(window_label) {
         info!(
             "gl display for window '{}' already exists. Skipping initialization.",
             window_label
@@ -538,7 +538,7 @@ fn start_render_thread<R: Runtime>(
     let template = glutin::config::ConfigTemplateBuilder::new()
         .compatible_with_native_window(raw_window_handle);
 
-    let gl_display = Arc::new(unsafe {
+    let display = Arc::new(unsafe {
         let preference = DisplayApiPreference::WglThenEgl(Some(window_handle.as_raw()));
         match glutin::display::Display::new(display_handle.as_raw(), preference) {
             Ok(display) => display,
@@ -549,35 +549,35 @@ fn start_render_thread<R: Runtime>(
         }
     });
 
-    gl_displays_lock.insert(window_label.to_string(), gl_display.clone());
+    displays_lock.insert(window_label.to_string(), display.clone());
 
-    drop(gl_displays_lock);
+    drop(displays_lock);
 
-    let gl_config = unsafe {
-        gl_display
+    let config = unsafe {
+        display
             .find_configs(template.build())
             .unwrap()
             .next()
             .expect("No suitable config found")
     };
 
-    let gl_surface = unsafe {
-        gl_display
-            .create_window_surface(&gl_config, &surface_attributes)
+    let surface = unsafe {
+        display
+            .create_window_surface(&config, &surface_attributes)
             .expect("Failed to create window surface")
     };
 
     let context_attributes =
         glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
 
-    let gl_context = unsafe {
-        gl_display
-            .create_context(&gl_config, &context_attributes)
+    let context = unsafe {
+        display
+            .create_context(&config, &context_attributes)
             .expect("Failed to create context")
     };
 
-    let current_context = gl_context
-        .make_current(&gl_surface)
+    let current_context = context
+        .make_current(&surface)
         .expect("Failed to make context current");
 
     let mut render_context = match RenderContext::new(
@@ -586,7 +586,7 @@ fn start_render_thread<R: Runtime>(
             RenderParam::ApiType(RenderParamApiType::OpenGl),
             RenderParam::InitParams(OpenGLInitParams {
                 get_proc_address,
-                ctx: gl_display.clone(),
+                ctx: display.clone(),
             }),
         ],
     ) {
@@ -599,13 +599,22 @@ fn start_render_thread<R: Runtime>(
 
     let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
 
-    let redraw_tx: mpsc::Sender<MpvThreadEvent> = event_tx.clone();
+    let redraw_tx = event_tx.clone();
+    let resize_tx = event_tx.clone();
+
     render_context.set_update_callback(move || {
         redraw_tx.send(MpvThreadEvent::Redraw).ok();
     });
 
     mpv.lock().unwrap().set_wakeup_callback(move || {
         event_tx.send(MpvThreadEvent::MpvEvents).ok();
+    });
+
+    window.on_window_event(move |event| match event {
+        tauri::WindowEvent::Resized(_) => {
+            resize_tx.send(MpvThreadEvent::Redraw).ok();
+        }
+        _ => {}
     });
 
     for event in event_rx {
@@ -622,7 +631,7 @@ fn start_render_thread<R: Runtime>(
                     }
                 }
 
-                gl_surface
+                surface
                     .swap_buffers(&current_context)
                     .expect("Failed to swap buffers");
             }
