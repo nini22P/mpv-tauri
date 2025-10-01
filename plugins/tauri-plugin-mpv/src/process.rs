@@ -14,12 +14,12 @@ use crate::{MpvConfig, MpvExt, MpvInstance};
 
 pub fn init_mpv_process<R: Runtime>(
     app: &AppHandle<R>,
-    window_handle: i64,
+    wid: i64,
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
     let ipc_pipe = get_ipc_pipe(window_label);
-    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms.unwrap_or(2000));
+    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms);
 
     let mut instances_lock = app.mpv().instances.lock().unwrap();
     if let Some(instance) = instances_lock.get_mut(window_label) {
@@ -49,20 +49,20 @@ pub fn init_mpv_process<R: Runtime>(
     debug!("Using IPC pipe: {}", ipc_pipe);
     debug!(
         "Starting mpv process for window '{}' (WID: {})",
-        window_label, window_handle
+        window_label, wid
     );
 
     // Default mpv arguments
     // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
-        format!("--wid={}", window_handle),
+        format!("--wid={}", wid),
         format!("--input-ipc-server={}", ipc_pipe),
         "--profile=libmpv".to_string(),
     ];
 
-    args.extend(mpv_config.args.unwrap_or_default());
+    args.extend(mpv_config.args);
 
-    let mpv_path = mpv_config.path.unwrap_or_else(|| "mpv".to_string());
+    let mpv_path = mpv_config.path;
 
     debug!(
         "Spawning mpv process for window '{}' with args: {} {}",
@@ -72,7 +72,7 @@ pub fn init_mpv_process<R: Runtime>(
     );
 
     let args_clone = args.clone();
-    let show_mpv_output = mpv_config.show_mpv_output.unwrap_or(false);
+    let show_mpv_output = mpv_config.show_mpv_output;
 
     match Command::new(mpv_path.clone())
         .args(args)
@@ -138,7 +138,7 @@ pub fn init_mpv_process<R: Runtime>(
             );
 
             let window_label_clone = window_label.to_string();
-            let observed_properties = mpv_config.observed_properties.clone().unwrap_or_default();
+            let observed_properties = mpv_config.observed_properties.clone();
             let app_clone = app.clone();
             let process_id = child.id();
 
@@ -147,6 +147,8 @@ pub fn init_mpv_process<R: Runtime>(
                 ipc_timeout,
             };
             instances_lock.insert(window_label.to_string(), instance);
+
+            drop(instances_lock);
 
             std::thread::spawn(move || {
                 events::start_event_listener(
