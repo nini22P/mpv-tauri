@@ -569,6 +569,12 @@ fn start_render_thread<R: Runtime>(
     window_label: &str,
     init_tx: mpsc::Sender<Result<()>>,
 ) -> Result<()> {
+    let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
+
+    let redraw_tx = event_tx.clone();
+    let redraw_tx_for_stop = event_tx.clone();
+    let resize_tx = event_tx.clone();
+
     let setup_result = (|| -> Result<Option<(_, _, _, _, _, _)>> {
         let mut render_contexts_lock = match app.mpv().render_contexts.lock() {
             Ok(guard) => guard,
@@ -664,11 +670,6 @@ fn start_render_thread<R: Runtime>(
 
         drop(render_contexts_lock);
 
-        let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
-
-        let redraw_tx = event_tx.clone();
-        let resize_tx = event_tx.clone();
-
         ctx.lock().unwrap().set_update_callback(move || {
             redraw_tx.send(MpvThreadEvent::Redraw).ok();
         });
@@ -714,59 +715,63 @@ fn start_render_thread<R: Runtime>(
         return Ok(());
     }
 
-    let mut should_render = true;
+    let mut state = RenderState::Stopped;
 
-    mpv.lock()
-        .unwrap()
-        .observe_property("playlist-pos", libmpv2::Format::Int64, 0)?;
-
-    for event in event_rx {
+    while let Ok(event) = event_rx.recv() {
         match event {
             MpvThreadEvent::Redraw => {
-                if should_render {
-                    if let Ok(size) = window.inner_size() {
-                        if let Err(e) = ctx.lock().unwrap().render::<Arc<glutin::display::Display>>(
-                            0,
-                            size.width as _,
-                            size.height as _,
-                            true,
-                        ) {
-                            error!("Failed to render frame: {}", e);
+                match &mut state {
+                    RenderState::Playing => {
+                        // trace!("Redraw event in Playing state.");
+                    }
+                    RenderState::Clearing(frames_left) => {
+                        trace!(
+                            "Redraw event in Clearing state. Frames left: {}",
+                            frames_left
+                        );
+                        *frames_left -= 1;
+                        if *frames_left == 0 {
+                            trace!("Clearing finished. State -> Stopped");
+                            state = RenderState::Stopped;
+                        } else {
+                            std::thread::sleep(std::time::Duration::from_millis(16));
+                            redraw_tx_for_stop.send(MpvThreadEvent::Redraw).ok();
                         }
                     }
-
-                    surface
-                        .swap_buffers(&current_context)
-                        .expect("Failed to swap buffers");
+                    RenderState::Stopped => {
+                        trace!("Redraw event in Stopped state.");
+                    }
                 }
+
+                if let Ok(size) = window.inner_size() {
+                    if let Err(e) = ctx.lock().unwrap().render::<Arc<glutin::display::Display>>(
+                        0,
+                        size.width as _,
+                        size.height as _,
+                        true,
+                    ) {
+                        error!("Failed to render frame: {}", e);
+                    }
+                }
+
+                surface
+                    .swap_buffers(&current_context)
+                    .expect("Failed to swap buffers");
             }
             MpvThreadEvent::MpvEvents => {
                 while let Some(mpv_event) = mpv.lock().unwrap().wait_event(0.0) {
                     match mpv_event {
-                        Ok(libmpv2::events::Event::PropertyChange { name, change, .. }) => {
-                            match name {
-                                "playlist-pos" => {
-                                    if let libmpv2::events::PropertyData::Int64(pos) = change {
-                                        if pos == -1 {
-                                            should_render = false;
-                                            clear_surface(&display, &surface, &current_context);
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
                         Ok(libmpv2::events::Event::StartFile) => {
-                            should_render = true;
+                            state = RenderState::Playing;
                         }
-                        Ok(libmpv2::events::Event::EndFile(_)) => {}
+                        Ok(libmpv2::events::Event::EndFile(_)) => {
+                            state = RenderState::Clearing(5);
+                        }
                         Ok(libmpv2::events::Event::Shutdown) => {
                             info!(
                                 "Shutdown event received, exiting render thread for window '{}'.",
                                 window_label
                             );
-
-                            clear_surface(&display, &surface, &current_context);
 
                             drop(current_context);
                             drop(surface);
@@ -795,24 +800,4 @@ fn start_render_thread<R: Runtime>(
     }
 
     Ok(())
-}
-
-fn clear_surface(
-    display: &Arc<glutin::display::Display>,
-    surface: &glutin::surface::Surface<glutin::surface::WindowSurface>,
-    context: &glutin::context::PossiblyCurrentContext,
-) {
-    trace!("Clearing surface.");
-    unsafe {
-        let gl = glow::Context::from_loader_function(|s| match CString::new(s) {
-            Ok(c_str) => display.get_proc_address(&c_str) as *const _,
-            Err(_) => std::ptr::null(),
-        });
-        gl.clear_color(0.0, 0.0, 0.0, 1.0);
-        gl.clear(glow::COLOR_BUFFER_BIT);
-        gl.flush();
-        gl.finish();
-    }
-
-    surface.swap_buffers(context).ok();
 }
