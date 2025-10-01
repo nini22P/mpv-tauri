@@ -96,6 +96,13 @@ pub enum MpvThreadEvent {
     MpvEvents,
 }
 
+#[derive(Debug)]
+pub enum RenderState {
+    Playing,
+    Clearing(u8),
+    Stopped,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MpvFormat {
