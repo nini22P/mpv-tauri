@@ -15,6 +15,8 @@ pub enum Error {
     WindowNotFound(String),
     #[error("Failed to get window handle: {0}")]
     WindowHandle(#[from] raw_window_handle::HandleError),
+    #[error("mpv instance not found: {0}")]
+    InstanceNotFound(String),
     #[error("A libmpv error occurred: {0}")]
     Mpv(String),
     #[error("mpv initialization failed: {0}")]
