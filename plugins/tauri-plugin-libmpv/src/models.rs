@@ -8,16 +8,8 @@ use std::{
 };
 use tauri::{Runtime, WebviewWindow};
 
-use crate::desktop::Mpv;
-
-#[derive(Clone)]
 pub struct MpvInstance {
-    pub mpv: Arc<Mutex<libmpv2::Mpv>>,
-}
-
-pub struct InstanceFinder<'a, R: Runtime> {
-    pub mpv: &'a Mpv<R>,
-    pub window_label: &'a str,
+    pub mpv: libmpv2::Mpv,
 }
 
 pub struct RenderContext {
