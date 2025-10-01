@@ -96,7 +96,7 @@ const useMpv = () => {
     return () => {
       unlistenPromise.then(unlisten => unlisten())
     }
-  }, [])
+  }, [OBSERVED_PROPERTIES])
 }
 
 export default useMpv
