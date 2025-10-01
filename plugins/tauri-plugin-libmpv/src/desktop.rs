@@ -721,26 +721,17 @@ fn start_render_thread<R: Runtime>(
         match event {
             MpvThreadEvent::Redraw => {
                 match &mut state {
-                    RenderState::Playing => {
-                        // trace!("Redraw event in Playing state.");
-                    }
+                    RenderState::Playing => {}
                     RenderState::Clearing(frames_left) => {
-                        trace!(
-                            "Redraw event in Clearing state. Frames left: {}",
-                            frames_left
-                        );
                         *frames_left -= 1;
                         if *frames_left == 0 {
-                            trace!("Clearing finished. State -> Stopped");
                             state = RenderState::Stopped;
                         } else {
                             std::thread::sleep(std::time::Duration::from_millis(16));
                             redraw_tx_for_stop.send(MpvThreadEvent::Redraw).ok();
                         }
                     }
-                    RenderState::Stopped => {
-                        trace!("Redraw event in Stopped state.");
-                    }
+                    RenderState::Stopped => {}
                 }
 
                 if let Ok(size) = window.inner_size() {
@@ -766,6 +757,7 @@ fn start_render_thread<R: Runtime>(
                         }
                         Ok(libmpv2::events::Event::EndFile(_)) => {
                             state = RenderState::Clearing(5);
+                            redraw_tx_for_stop.send(MpvThreadEvent::Redraw).ok();
                         }
                         Ok(libmpv2::events::Event::Shutdown) => {
                             info!(
