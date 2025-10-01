@@ -11,8 +11,10 @@ pub enum Error {
     PluginInvoke(#[from] tauri::plugin::mobile::PluginInvokeError),
     #[error("Unsupported platform for mpv integration")]
     UnsupportedPlatform,
-    #[error("Failed to get window handle")]
-    WindowHandleError,
+    #[error("Not found window with label '{0}'")]
+    WindowNotFound(String),
+    #[error("Failed to get window handle: {0}")]
+    WindowHandle(#[from] raw_window_handle::HandleError),
     #[error("A libmpv error occurred: {0}")]
     Mpv(String),
     #[error("mpv initialization failed: {0}")]

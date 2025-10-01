@@ -2,6 +2,7 @@ use tauri::{command, AppHandle, Runtime};
 
 use crate::MpvConfig;
 use crate::MpvExt;
+use crate::MpvFormat;
 use crate::Result;
 use crate::VideoMarginRatio;
 
@@ -9,9 +10,9 @@ use crate::VideoMarginRatio;
 pub(crate) async fn init<R: Runtime>(
     app: AppHandle<R>,
     mpv_config: MpvConfig,
-    window_label: &str,
+    window_label: String,
 ) -> Result<String> {
-    app.mpv().init(mpv_config, window_label)
+    app.mpv().init(mpv_config, &window_label)
 }
 
 #[command]
@@ -49,11 +50,11 @@ pub(crate) async fn set_property<R: Runtime>(
 pub(crate) async fn get_property<R: Runtime>(
     app: AppHandle<R>,
     name: String,
-    format: String,
+    format: MpvFormat,
     window_label: String,
 ) -> Result<serde_json::Value> {
     tauri::async_runtime::spawn_blocking(move || {
-        app.mpv().get_property(name, Some(format), &window_label)
+        app.mpv().get_property(name, format, &window_label)
     })
     .await
     .map_err(|e| crate::Error::GetProperty(e.to_string()))?

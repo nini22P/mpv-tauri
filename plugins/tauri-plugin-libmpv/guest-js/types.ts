@@ -13,6 +13,7 @@ export type MpvObservableFormat = Exclude<MpvFormat, 'node'>;
 export type MpvObservableProperty = readonly [string, MpvObservableFormat];
 
 export interface MpvConfig {
+  integrationMode?: 'wid' | 'render';
   initialOptions?: Record<string, string | boolean | number>;
   observedProperties?: readonly MpvObservableProperty[];
 }

@@ -1,26 +1,19 @@
-use std::collections::HashMap;
-use std::sync::Mutex;
-
+use glutin::context::NotCurrentGlContext;
+use glutin::display::{DisplayApiPreference, GlDisplay};
+use glutin::surface::GlSurface;
+use libmpv2::render::{OpenGLInitParams, RenderParam, RenderParamApiType};
 use log::{error, info, trace, warn};
-use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
+use std::collections::HashMap;
+use std::ffi::{c_void, CString};
+use std::sync::{mpsc, Arc, Mutex};
 use tauri::Emitter;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
 use crate::error::mpv_error_code_to_name;
 use crate::models::*;
 use crate::{MpvExt, Result};
-
-fn get_format_from_string(format_str: &str) -> Result<libmpv2::Format> {
-    match format_str {
-        "string" => Ok(libmpv2::Format::String),
-        "flag" => Ok(libmpv2::Format::Flag),
-        "int64" => Ok(libmpv2::Format::Int64),
-        "double" => Ok(libmpv2::Format::Double),
-        "node" => Ok(libmpv2::Format::Node),
-        _ => Err(crate::Error::Format(format_str.to_string())),
-    }
-}
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
@@ -30,6 +23,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     let mpv = Mpv {
         app: app.clone(),
         instances: Mutex::new(HashMap::new()),
+        render_contexts: Mutex::new(HashMap::new()),
     };
     Ok(mpv)
 }
@@ -37,192 +31,172 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mpv<R: Runtime> {
     app: AppHandle<R>,
     pub instances: Mutex<HashMap<String, MpvInstance>>,
+    pub render_contexts: Mutex<HashMap<String, RenderContext>>,
 }
 
 impl<R: Runtime> Mpv<R> {
     pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        let app = self.app.clone();
-
-        if let Some(webview_window) = app.get_webview_window(window_label) {
-            let handle_result = webview_window.window_handle();
-
-            match handle_result {
-                Ok(handle_wrapper) => {
-                    let raw_handle = handle_wrapper.as_raw();
-                    let window_handle = match raw_handle {
-                        RawWindowHandle::Win32(handle) => handle.hwnd.get() as i64,
-                        RawWindowHandle::Xlib(handle) => handle.window as i64,
-                        RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
-                        _ => {
-                            error!(
-                                "Unsupported window handle type for window '{}'.",
-                                window_label
-                            );
-                            return Err(crate::Error::UnsupportedPlatform);
-                        }
-                    };
-
-                    let mut instances_lock = app.mpv().instances.lock().unwrap();
-
-                    if instances_lock.contains_key(window_label) {
-                        info!(
-                            "mpv instance for window '{}' already exists. Skipping initialization.",
-                            window_label
-                        );
-                        return Ok(window_label.to_string());
-                    }
-
-                    info!("Initializing mpv instance for window '{}'...", window_label);
-
-                    let mpv = libmpv2::Mpv::with_initializer(|init| {
-                        if let Some(options) = mpv_config.initial_options {
-                            for (key, value) in options {
-                                match value {
-                                    serde_json::Value::Bool(b) => init.set_option(&key, b)?,
-                                    serde_json::Value::Number(n) => {
-                                        if let Some(i) = n.as_i64() {
-                                            init.set_option(&key, i)?
-                                        } else if let Some(f) = n.as_f64() {
-                                            init.set_option(&key, f)?
-                                        }
-                                    }
-                                    serde_json::Value::String(s) => {
-                                        init.set_option(&key, s.as_str())?
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-
-                        init.set_option("wid", window_handle)?;
-
-                        Ok(())
-                    })
-                    .map_err(|e| crate::Error::Initialization(e.to_string()))?;
-
-                    let mut mpv_client = mpv
-                        .create_client(None)
-                        .map_err(|e| crate::Error::ClientCreation(e.to_string()))?;
-
-                    if let Some(observed_properties) = mpv_config.observed_properties {
-                        trace!("Observing properties on init: {:?}", observed_properties);
-                        for (property, format_str) in observed_properties {
-                            let format = get_format_from_string(&format_str)?;
-                            trace!("Observing '{}' with format {:?}", property, format);
-                            if let Err(e) = mpv_client.observe_property(&property, format, 0) {
-                                error!("Failed to observe property '{}': {}", property, e);
-                                return Err(crate::Error::Mpv(e.to_string()));
-                            }
-                        }
-                    }
-
-                    info!("mpv instance initialized for window '{}'.", window_label,);
-
-                    let instance = MpvInstance { mpv };
-                    instances_lock.insert(window_label.to_string(), instance);
-
-                    let app_handle = app.clone();
-
-                    let window_label_clone = window_label.to_string();
-
-                    std::thread::spawn(move || 'event_loop: loop {
-                        let event_result = mpv_client.wait_event(60.0);
-
-                        match event_result {
-                            Some(Ok(event)) => {
-                                let raw_event_debug = format!("{:?}", event);
-                                let serializable_event = SerializableMpvEvent::from(event);
-
-                                let event_name = format!("mpv-event-{}", window_label_clone);
-
-                                if let SerializableMpvEvent::Shutdown = serializable_event {
-                                    trace!("mpv event loop for window '{}' finished due to shutdown event.", window_label_clone);
-                                    let _ = app_handle.emit_to(
-                                        &window_label_clone,
-                                        &event_name,
-                                        &serializable_event,
-                                    );
-                                    break 'event_loop;
-                                }
-
-                                if let Err(e) = app_handle.emit_to(
-                                    &window_label_clone,
-                                    &event_name,
-                                    &serializable_event,
-                                ) {
-                                    error!(
-                            "Failed to emit mpv event to frontend: {}. Original event: {}",
-                            e, raw_event_debug
-                        );
-                                }
-                            }
-                            None => continue 'event_loop,
-                            Some(Err(e)) => {
-                                error!(
-                                    "Error in mpv event loop for window '{}': {}. Exiting.",
-                                    window_label_clone, e
-                                );
-                                break 'event_loop;
-                            }
-                        }
-                    });
-
-                    Ok(window_label.to_string())
-                }
-                Err(e) => {
-                    error!(
-                        "Failed to get raw window handle for window '{}': {:?}",
-                        window_label, e
-                    );
-                    Err(crate::Error::WindowHandleError)
-                }
+        match mpv_config.integration_mode {
+            MpvIntegration::Wid => {
+                self.init_wid_mode(mpv_config, window_label)?;
             }
-        } else {
-            warn!(
-                "Window with label '{}' not found. Please ensure the window exists.",
+            MpvIntegration::Render => {
+                self.init_render_mode(mpv_config, window_label)?;
+            }
+        }
+
+        Ok(window_label.to_string())
+    }
+
+    fn init_wid_mode(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
+        let window = self
+            .app
+            .get_webview_window(window_label)
+            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+        let window_handle = window.window_handle()?;
+        let wid = get_wid_from_handle(window_handle.as_raw())?;
+
+        let mut initial_options = mpv_config.initial_options.clone();
+        initial_options.insert("wid".to_string(), serde_json::json!(wid));
+
+        let mut instances_lock = match self.app.mpv().instances.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex was poisoned, recovering.");
+                poisoned.into_inner()
+            }
+        };
+
+        if instances_lock.contains_key(window_label) {
+            info!(
+                "mpv instance for window '{}' already exists. Skipping initialization.",
                 window_label
             );
-            Err(crate::Error::WindowHandleError)
+            return Ok(window_label.to_string());
         }
+
+        let mpv = Arc::new(Mutex::new(create_mpv_instance(
+            initial_options,
+            window_label,
+        )?));
+
+        let mpv_for_event = mpv.clone();
+
+        let instance = MpvInstance { mpv };
+        instances_lock.insert(window_label.to_string(), instance);
+
+        drop(instances_lock);
+
+        start_event_loop(
+            self.app.clone(),
+            mpv_for_event,
+            mpv_config.observed_properties,
+            window_label.to_string(),
+        )?;
+
+        info!("Wid mode initialized for window '{}'.", window_label);
+
+        Ok(window_label.to_string())
+    }
+
+    fn init_render_mode(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
+        let mut initial_options = mpv_config.initial_options.clone();
+        initial_options.insert("vo".to_string(), serde_json::json!("libmpv"));
+
+        let mut instances_lock = match self.app.mpv().instances.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex was poisoned, recovering.");
+                poisoned.into_inner()
+            }
+        };
+
+        if instances_lock.contains_key(window_label) {
+            info!(
+                "mpv instance for window '{}' already exists. Skipping initialization.",
+                window_label
+            );
+            return Ok(window_label.to_string());
+        }
+
+        let mpv = Arc::new(Mutex::new(create_mpv_instance(
+            initial_options,
+            window_label,
+        )?));
+
+        let mpv_for_event = mpv.clone();
+        let mpv_for_render = mpv.clone();
+
+        let instance = MpvInstance { mpv };
+        instances_lock.insert(window_label.to_string(), instance);
+
+        drop(instances_lock);
+
+        start_event_loop(
+            self.app.clone(),
+            mpv_for_event,
+            mpv_config.observed_properties,
+            window_label.to_string(),
+        )?;
+
+        let init_rx =
+            spawn_render_thread(self.app.clone(), mpv_for_render, window_label.to_string())?;
+
+        match init_rx.recv() {
+            Ok(Ok(())) => {
+                info!("Render mode initialized for window '{}'.", window_label);
+                return Ok(window_label.to_string());
+            }
+            Ok(Err(e)) => {
+                let error_message = format!(
+                    "Render thread for window '{}' terminated unexpectedly during setup.",
+                    window_label
+                );
+                error!("{}: {}", error_message, e);
+                return Err(crate::Error::Initialization(error_message));
+            }
+            Err(_) => {
+                return Err(crate::Error::Initialization(format!(
+                    "Render thread for window '{}' terminated unexpectedly during setup.",
+                    window_label
+                )))
+            }
+        };
     }
 
     pub fn destroy(&self, window_label: &str) -> Result<()> {
-        let instance_to_kill = {
-            let mut instances_lock = match self.app.mpv().instances.lock() {
+        let instance_to_kill = self.instance(window_label).remove()?;
+
+        if let Some(instance) = instance_to_kill {
+            let mpv = match instance.mpv.lock() {
                 Ok(guard) => guard,
                 Err(poisoned) => {
-                    warn!("Mutex for mpv instances was poisoned. Recovering.");
+                    warn!("Mutex for mpv instance was poisoned. Recovering.");
                     poisoned.into_inner()
                 }
             };
-            instances_lock.remove(window_label)
-        };
 
-        if let Some(instance) = instance_to_kill {
-            match instance.mpv.command("quit", &[]) {
-                Ok(_) => {
-                    info!(
-                        "mpv instance for window '{}' destroyed successfully.",
-                        window_label,
-                    );
-                    Ok(())
-                }
-                Err(e) => {
-                    let error_message = format!(
-                        "Failed to destroy mpv instance for window '{}': {}",
-                        window_label, e,
-                    );
-                    error!("{}", error_message);
-                    Err(crate::Error::Mpv(error_message))
-                }
-            }
-        } else {
+            mpv.command("quit", &[]).map_err(|e| {
+                let error_message = format!(
+                    "Failed to destroy mpv instance for window '{}': {}",
+                    window_label, e,
+                );
+                error!("{}", error_message);
+                crate::Error::Mpv(error_message)
+            })?;
+
             info!(
-            "No running mpv instance found for window '{}' to destroy. It may have already terminated.",
-            window_label
-        );
-            Ok(())
+                "mpv instance for window '{}' destroyed successfully.",
+                window_label,
+            );
+        } else {
+            trace!(
+                "No running mpv instance found for window '{}' to destroy.",
+                window_label
+            );
         }
+
+        Ok(())
     }
 
     pub fn command(
@@ -237,55 +211,44 @@ impl<R: Runtime> Mpv<R> {
             trace!("COMMAND '{}' '{:?}'", name, args);
         }
 
-        let instances_lock = match self.app.mpv().instances.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                warn!("Mutex was poisoned, recovering.");
-                poisoned.into_inner()
-            }
-        };
+        let instance = self.instance(window_label).required()?;
 
-        if let Some(instance) = instances_lock.get(window_label) {
-            let string_args: Vec<String> = args
-                .iter()
-                .map(|v| match v {
-                    serde_json::Value::Bool(b) => {
-                        if *b {
-                            "yes".to_string()
-                        } else {
-                            "no".to_string()
-                        }
+        let string_args: Vec<String> = args
+            .iter()
+            .map(|v| match v {
+                serde_json::Value::Bool(b) => {
+                    if *b {
+                        "yes".to_string()
+                    } else {
+                        "no".to_string()
                     }
-                    serde_json::Value::Number(n) => n.to_string(),
-                    serde_json::Value::String(s) => s.clone(),
-                    _ => v.to_string().trim_matches('"').to_string(),
-                })
-                .collect();
+                }
+                serde_json::Value::Number(n) => n.to_string(),
+                serde_json::Value::String(s) => s.clone(),
+                _ => v.to_string().trim_matches('"').to_string(),
+            })
+            .collect();
 
-            let args_as_slices: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
+        let args_as_slices: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
 
-            if let Err(e) = instance.mpv.command(name, &args_as_slices) {
-                let error_details = match e {
-                    libmpv2::Error::Raw(code) => {
-                        format!("{} ({})", mpv_error_code_to_name(code), code)
-                    }
+        if let Err(e) = instance.mpv.lock().unwrap().command(name, &args_as_slices) {
+            let error_details = match e {
+                libmpv2::Error::Raw(code) => {
+                    format!("{} ({})", mpv_error_code_to_name(code), code)
+                }
 
-                    _ => e.to_string(),
-                };
+                _ => e.to_string(),
+            };
 
-                let error_message = format!(
-                    "Failed to execute mpv command '{}' with args '{:?}': {}",
-                    name, args, error_details
-                );
-                error!("{}", error_message);
-                return Err(crate::Error::Command(error_message));
-            }
-
-            Ok(())
-        } else {
-            error!("mpv instance for window label '{}' not found", window_label);
-            Ok(())
+            let error_message = format!(
+                "Failed to execute mpv command '{}' with args '{:?}': {}",
+                name, args, error_details
+            );
+            error!("{}", error_message);
+            return Err(crate::Error::Command(error_message));
         }
+
+        Ok(())
     }
 
     pub fn set_property(
@@ -296,115 +259,94 @@ impl<R: Runtime> Mpv<R> {
     ) -> crate::Result<()> {
         trace!("SET PROPERTY '{}' '{:?}'", name, value);
 
-        let instances_lock = match self.app.mpv().instances.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                warn!("Mutex was poisoned, recovering.");
-                poisoned.into_inner()
+        let instance = self.instance(window_label).required()?;
+
+        let _ = match value {
+            serde_json::Value::Bool(b) => instance.mpv.lock().unwrap().set_property(name, *b),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    instance.mpv.lock().unwrap().set_property(name, i)
+                } else if let Some(f) = n.as_f64() {
+                    instance.mpv.lock().unwrap().set_property(name, f)
+                } else {
+                    return Err(crate::Error::SetProperty(format!(
+                        "Unsupported number format: {}",
+                        n
+                    )));
+                }
+            }
+            serde_json::Value::String(s) => {
+                instance.mpv.lock().unwrap().set_property(name, s.as_str())
+            }
+            serde_json::Value::Null => {
+                return Err(crate::Error::SetProperty(
+                    "Cannot set property to null".to_string(),
+                ))
+            }
+            _ => {
+                return Err(crate::Error::SetProperty(format!(
+                    "Unsupported value type for property '{}'",
+                    name
+                )))
             }
         };
 
-        if let Some(instance) = instances_lock.get(window_label) {
-            let _ = match value {
-                serde_json::Value::Bool(b) => instance.mpv.set_property(name, *b),
-                serde_json::Value::Number(n) => {
-                    if let Some(i) = n.as_i64() {
-                        instance.mpv.set_property(name, i)
-                    } else if let Some(f) = n.as_f64() {
-                        instance.mpv.set_property(name, f)
-                    } else {
-                        return Err(crate::Error::SetProperty(format!(
-                            "Unsupported number format: {}",
-                            n
-                        )));
-                    }
-                }
-                serde_json::Value::String(s) => instance.mpv.set_property(name, s.as_str()),
-                serde_json::Value::Null => {
-                    return Err(crate::Error::SetProperty(
-                        "Cannot set property to null".to_string(),
-                    ))
-                }
-                _ => {
-                    return Err(crate::Error::SetProperty(format!(
-                        "Unsupported value type for property '{}'",
-                        name
-                    )))
-                }
-            };
-
-            Ok(())
-        } else {
-            Err(crate::Error::SetProperty(format!(
-                "mpv instance for window label '{}' not found",
-                window_label
-            )))
-        }
+        Ok(())
     }
 
     pub fn get_property(
         &self,
         name: String,
-        format_str: Option<String>,
+        format: MpvFormat,
         window_label: &str,
     ) -> crate::Result<serde_json::Value> {
-        let instances_lock = match self.app.mpv().instances.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                warn!("Mutex was poisoned, recovering.");
-                poisoned.into_inner()
+        let instance = self.instance(window_label).required()?;
+
+        let result: std::result::Result<serde_json::Value, libmpv2::Error> = {
+            let format = format.into();
+
+            match format {
+                libmpv2::Format::Flag => instance
+                    .mpv
+                    .lock()
+                    .unwrap()
+                    .get_property::<bool>(&name)
+                    .map(serde_json::Value::from),
+                libmpv2::Format::Int64 => instance
+                    .mpv
+                    .lock()
+                    .unwrap()
+                    .get_property::<i64>(&name)
+                    .map(serde_json::Value::from),
+                libmpv2::Format::Double => instance
+                    .mpv
+                    .lock()
+                    .unwrap()
+                    .get_property::<f64>(&name)
+                    .map(serde_json::Value::from),
+                libmpv2::Format::String => instance
+                    .mpv
+                    .lock()
+                    .unwrap()
+                    .get_property::<String>(&name)
+                    .map(serde_json::Value::from),
+                libmpv2::Format::Node => {
+                    match instance.mpv.lock().unwrap().get_property::<MpvNode>(&name) {
+                        Ok(wrapper) => Ok(wrapper.into_inner()),
+                        Err(e) => Err(e),
+                    }
+                }
             }
         };
 
-        if let Some(instance) = instances_lock.get(window_label) {
-            let result: std::result::Result<serde_json::Value, libmpv2::Error> = {
-                if let Some(s) = format_str {
-                    let format = get_format_from_string(&s)?;
-                    match format {
-                        libmpv2::Format::Flag => instance
-                            .mpv
-                            .get_property::<bool>(&name)
-                            .map(serde_json::Value::from),
-                        libmpv2::Format::Int64 => instance
-                            .mpv
-                            .get_property::<i64>(&name)
-                            .map(serde_json::Value::from),
-                        libmpv2::Format::Double => instance
-                            .mpv
-                            .get_property::<f64>(&name)
-                            .map(serde_json::Value::from),
-                        libmpv2::Format::String => instance
-                            .mpv
-                            .get_property::<String>(&name)
-                            .map(serde_json::Value::from),
-                        libmpv2::Format::Node => {
-                            match instance.mpv.get_property::<MpvNode>(&name) {
-                                Ok(wrapper) => Ok(wrapper.into_inner()),
-                                Err(e) => Err(e),
-                            }
-                        }
-                    }
-                } else {
-                    instance
-                        .mpv
-                        .get_property::<String>(&name)
-                        .map(serde_json::Value::from)
-                }
-            };
+        let value = match result {
+            Ok(val) => val,
+            Err(e) => return Err(e.into()),
+        };
 
-            let value = match result {
-                Ok(val) => val,
-                Err(e) => return Err(e.into()),
-            };
+        trace!("GET PROPERTY '{}' '{:?}'", name, value);
 
-            trace!("GET PROPERTY '{}' '{:?}'", name, value);
-            Ok(value)
-        } else {
-            Err(crate::Error::GetProperty(format!(
-                "mpv instance for window label '{}' not found",
-                window_label
-            )))
-        }
+        Ok(value)
     }
 
     pub fn set_video_margin_ratio(
@@ -414,33 +356,430 @@ impl<R: Runtime> Mpv<R> {
     ) -> Result<()> {
         trace!("SET VIDEO MARGIN RATIO '{:?}'", ratio);
 
-        let app = self.app.clone();
-        let instances_lock = match app.mpv().instances.lock() {
+        let instance = self.instance(window_label).required()?;
+
+        let mpv = instance.mpv.lock().unwrap();
+
+        let properties = [
+            ("video-margin-ratio-left", ratio.left.unwrap_or(0.0)),
+            ("video-margin-ratio-right", ratio.right.unwrap_or(0.0)),
+            ("video-margin-ratio-top", ratio.top.unwrap_or(0.0)),
+            ("video-margin-ratio-bottom", ratio.bottom.unwrap_or(0.0)),
+        ];
+
+        for (prop, val) in properties {
+            if let Err(e) = mpv.set_property(prop, val) {
+                error!("Failed to set video margin ratio for '{}': {}", prop, e);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn instance<'a>(&'a self, window_label: &'a str) -> InstanceFinder<'a, R> {
+        InstanceFinder {
+            mpv: self,
+            window_label,
+        }
+    }
+}
+
+impl<'a, R: Runtime> InstanceFinder<'a, R> {
+    pub fn get(&self) -> Result<Option<MpvInstance>> {
+        let instances_lock = match self.mpv.app.mpv().instances.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
                 warn!("Mutex was poisoned, recovering.");
                 poisoned.into_inner()
             }
         };
+        Ok(instances_lock.get(self.window_label).cloned())
+    }
 
-        if let Some(instance) = instances_lock.get(window_label) {
-            let mpv = &instance.mpv;
-            if let Err(e) = mpv.set_property("video-margin-ratio-left", ratio.left.unwrap_or(0.0)) {
-                error!("Failed to set video margin ratio: {}", e);
+    pub fn required(&self) -> Result<MpvInstance> {
+        self.get()?.ok_or_else(|| {
+            crate::Error::GetProperty(format!(
+                "mpv instance for window label '{}' not found",
+                self.window_label
+            ))
+        })
+    }
+
+    pub fn remove(&self) -> Result<Option<MpvInstance>> {
+        let mut instances_lock = match self.mpv.app.mpv().instances.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex for mpv instances was poisoned. Recovering.");
+                poisoned.into_inner()
             }
-            if let Err(e) = mpv.set_property("video-margin-ratio-right", ratio.right.unwrap_or(0.0))
-            {
-                error!("Failed to set video margin ratio: {}", e);
-            }
-            if let Err(e) = mpv.set_property("video-margin-ratio-top", ratio.top.unwrap_or(0.0)) {
-                error!("Failed to set video margin ratio: {}", e);
-            }
-            if let Err(e) =
-                mpv.set_property("video-margin-ratio-bottom", ratio.bottom.unwrap_or(0.0))
-            {
-                error!("Failed to set video margin ratio: {}", e);
+        };
+        Ok(instances_lock.remove(self.window_label))
+    }
+}
+
+fn get_wid_from_handle(raw_handle: RawWindowHandle) -> Result<i64> {
+    match raw_handle {
+        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get() as i64),
+        RawWindowHandle::Xlib(handle) => Ok(handle.window as i64),
+        RawWindowHandle::AppKit(handle) => Ok(handle.ns_view.as_ptr() as i64),
+        _ => Err(crate::Error::UnsupportedPlatform),
+    }
+}
+
+fn get_proc_address(display: &Arc<glutin::display::Display>, name: &str) -> *mut c_void {
+    match CString::new(name) {
+        Ok(c_str) => display.get_proc_address(&c_str) as *mut _,
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+fn create_mpv_instance(
+    initial_options: HashMap<String, serde_json::Value>,
+    window_label: &str,
+) -> Result<libmpv2::Mpv> {
+    let mpv = libmpv2::Mpv::with_initializer(|init| {
+        for (key, value) in initial_options {
+            match value {
+                serde_json::Value::Bool(b) => init.set_option(&key, b)?,
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        init.set_option(&key, i)?
+                    } else if let Some(f) = n.as_f64() {
+                        init.set_option(&key, f)?
+                    }
+                }
+                serde_json::Value::String(s) => init.set_option(&key, s.as_str())?,
+                _ => {}
             }
         }
         Ok(())
+    })
+    .map_err(|e| crate::Error::Initialization(e.to_string()));
+
+    info!("mpv instance initialized for window '{}'.", window_label);
+
+    mpv
+}
+
+fn start_event_loop<R: Runtime>(
+    app: AppHandle<R>,
+    mpv: Arc<Mutex<libmpv2::Mpv>>,
+    observed_properties: HashMap<String, MpvFormat>,
+    window_label: String,
+) -> Result<()> {
+    let mut mpv_client = match mpv.lock() {
+        Ok(guard) => guard.create_client(None)?,
+        Err(poisoned) => poisoned.into_inner().create_client(None)?,
+    };
+
+    info!(
+        "Setting up observed properties for window '{}'...",
+        window_label
+    );
+
+    for (prop, format) in observed_properties {
+        info!(
+            "Observing property '{}' with format '{:?}' for window '{}'",
+            prop, format, window_label
+        );
+        mpv_client
+            .observe_property(&prop, format.into(), 0)
+            .unwrap();
     }
+
+    std::thread::spawn(move || 'event_loop: loop {
+        let event_result = mpv_client.wait_event(60.0);
+
+        match event_result {
+            Some(Ok(event)) => {
+                let raw_event_debug = format!("{:?}", event);
+                let serializable_event = SerializableMpvEvent::from(event);
+
+                let event_name = format!("mpv-event-{}", window_label);
+
+                if let SerializableMpvEvent::Shutdown = serializable_event {
+                    trace!(
+                        "mpv event loop for window '{}' finished due to shutdown event.",
+                        window_label
+                    );
+                    let _ = app.emit_to(&window_label, &event_name, &serializable_event);
+                    break 'event_loop;
+                }
+
+                if let Err(e) = app.emit_to(&window_label, &event_name, &serializable_event) {
+                    error!(
+                        "Failed to emit mpv event to frontend: {}. Original event: {}",
+                        e, raw_event_debug
+                    );
+                }
+            }
+            None => continue 'event_loop,
+            Some(Err(e)) => {
+                error!(
+                    "Error in mpv event loop for window '{}': {}. Exiting.",
+                    window_label, e
+                );
+                break 'event_loop;
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn spawn_render_thread<R: Runtime>(
+    app: AppHandle<R>,
+    mpv: Arc<Mutex<libmpv2::Mpv>>,
+    window_label: String,
+) -> Result<mpsc::Receiver<Result<()>>> {
+    let (init_tx, init_rx) = mpsc::channel::<Result<()>>();
+
+    std::thread::spawn(move || {
+        let thread_result = setup_and_run_render_loop(app, mpv, &window_label, init_tx);
+
+        if let Err(e) = thread_result {
+            error!(
+                "Render thread for window '{}' exited with an error: {}",
+                window_label, e
+            );
+        }
+    });
+
+    Ok(init_rx)
+}
+
+fn setup_and_run_render_loop<R: Runtime>(
+    app: AppHandle<R>,
+    mpv: Arc<Mutex<libmpv2::Mpv>>,
+    window_label: &str,
+    init_tx: mpsc::Sender<Result<()>>,
+) -> Result<()> {
+    let mut mpv_client = match mpv.lock() {
+        Ok(guard) => guard.create_client(None)?,
+        Err(poisoned) => poisoned.into_inner().create_client(None)?,
+    };
+
+    let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
+
+    let redraw_tx = event_tx.clone();
+    let redraw_tx_for_stop = event_tx.clone();
+    let resize_tx = event_tx.clone();
+
+    let setup_result = (|| -> Result<Option<(_, _, _, _, _, _)>> {
+        let mut render_contexts_lock = match app.mpv().render_contexts.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Mutex for render contexts was poisoned. Recovering.");
+                poisoned.into_inner()
+            }
+        };
+        if render_contexts_lock.contains_key(window_label) {
+            info!(
+                "display for window '{}' already exists. Skipping initialization.",
+                window_label
+            );
+            return Ok(None);
+        }
+
+        let window = app
+            .get_webview_window(window_label)
+            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+        let window_handle = window.window_handle()?;
+        let raw_window_handle = window_handle.as_raw();
+        let display_handle = window.display_handle()?;
+
+        let surface_attributes = window.build_surface_attributes(Default::default()).unwrap();
+
+        let template = glutin::config::ConfigTemplateBuilder::new()
+            .compatible_with_native_window(raw_window_handle);
+
+        let display = Arc::new(unsafe {
+            let preference = DisplayApiPreference::WglThenEgl(Some(window_handle.as_raw()));
+            match glutin::display::Display::new(display_handle.as_raw(), preference) {
+                Ok(display) => display,
+                Err(e) => {
+                    error!("Failed to create glutin display: {}", e);
+                    return Err(crate::Error::UnsupportedPlatform);
+                }
+            }
+        });
+
+        let config = unsafe {
+            display
+                .find_configs(template.build())
+                .map_err(|e| {
+                    crate::Error::Initialization(format!("Failed to find GL configs: {}", e))
+                })?
+                .next()
+                .ok_or_else(|| {
+                    crate::Error::Initialization("No suitable GL config found".to_string())
+                })?
+        };
+
+        let surface = unsafe {
+            display
+                .create_window_surface(&config, &surface_attributes)
+                .expect("Failed to create window surface")
+        };
+
+        let context_attributes =
+            glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
+
+        let context = unsafe {
+            display
+                .create_context(&config, &context_attributes)
+                .expect("Failed to create context")
+        };
+
+        let current_context = context
+            .make_current(&surface)
+            .expect("Failed to make context current");
+
+        let render_context = RenderContext::new(
+            match libmpv2::render::RenderContext::new(
+                unsafe { mpv.lock().unwrap().ctx.as_mut() },
+                vec![
+                    RenderParam::ApiType(RenderParamApiType::OpenGl),
+                    RenderParam::InitParams(OpenGLInitParams {
+                        get_proc_address,
+                        ctx: display.clone(),
+                    }),
+                ],
+            ) {
+                Ok(ctx) => ctx,
+                Err(e) => {
+                    error!("Failed to create render context: {}", e);
+                    return Err(crate::Error::Initialization(e.to_string()));
+                }
+            },
+        );
+
+        let ctx = render_context.ctx.clone();
+
+        render_contexts_lock.insert(window_label.to_string(), render_context);
+
+        drop(render_contexts_lock);
+
+        ctx.lock().unwrap().set_update_callback(move || {
+            redraw_tx.send(MpvThreadEvent::Redraw).ok();
+        });
+
+        mpv_client.set_wakeup_callback(move || {
+            event_tx.send(MpvThreadEvent::MpvEvents).ok();
+        });
+
+        window.on_window_event(move |event| match event {
+            tauri::WindowEvent::Resized(_) => {
+                resize_tx.send(MpvThreadEvent::Redraw).ok();
+            }
+            _ => {}
+        });
+
+        Ok(Some((
+            event_rx,
+            window,
+            ctx,
+            surface,
+            current_context,
+            display,
+        )))
+    })();
+
+    let (event_rx, window, ctx, surface, current_context, display) = match setup_result {
+        Ok(Some(data)) => data,
+        Ok(None) => {
+            let _ = init_tx.send(Ok(()));
+            return Ok(());
+        }
+        Err(e) => {
+            let _ = init_tx.send(Err(e));
+            return Ok(());
+        }
+    };
+
+    if init_tx.send(Ok(())).is_err() {
+        info!(
+            "Parent thread disconnected. Aborting render thread for window '{}'.",
+            window_label
+        );
+        return Ok(());
+    }
+
+    let mut state = RenderState::Stopped;
+
+    while let Ok(event) = event_rx.recv() {
+        match event {
+            MpvThreadEvent::Redraw => {
+                match &mut state {
+                    RenderState::Playing => {}
+                    RenderState::Clearing(frames_left) => {
+                        *frames_left -= 1;
+                        if *frames_left == 0 {
+                            state = RenderState::Stopped;
+                        } else {
+                            std::thread::sleep(std::time::Duration::from_millis(16));
+                            redraw_tx_for_stop.send(MpvThreadEvent::Redraw).ok();
+                        }
+                    }
+                    RenderState::Stopped => {}
+                }
+
+                if let Ok(size) = window.inner_size() {
+                    if let Err(e) = ctx.lock().unwrap().render::<Arc<glutin::display::Display>>(
+                        0,
+                        size.width as _,
+                        size.height as _,
+                        true,
+                    ) {
+                        error!("Failed to render frame: {}", e);
+                    }
+                }
+
+                surface
+                    .swap_buffers(&current_context)
+                    .expect("Failed to swap buffers");
+            }
+            MpvThreadEvent::MpvEvents => {
+                while let Some(mpv_event) = mpv_client.wait_event(0.0) {
+                    match mpv_event {
+                        Ok(libmpv2::events::Event::StartFile) => {
+                            state = RenderState::Playing;
+                        }
+                        Ok(libmpv2::events::Event::EndFile(_)) => {
+                            state = RenderState::Clearing(5);
+                            redraw_tx_for_stop.send(MpvThreadEvent::Redraw).ok();
+                        }
+                        Ok(libmpv2::events::Event::Shutdown) => {
+                            info!(
+                                "Shutdown event received, exiting render thread for window '{}'.",
+                                window_label
+                            );
+
+                            drop(current_context);
+                            drop(surface);
+                            drop(display);
+
+                            let mut render_contexts_lock =
+                                app.mpv().render_contexts.lock().unwrap();
+                            render_contexts_lock.remove(window_label);
+
+                            return Ok(());
+                        }
+                        Ok(_e) => {}
+                        Err(e) => {
+                            error!("mpv event error: {}", e);
+
+                            let mut render_contexts_lock =
+                                app.mpv().render_contexts.lock().unwrap();
+                            render_contexts_lock.remove(window_label);
+
+                            return Err(crate::Error::Mpv(e.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

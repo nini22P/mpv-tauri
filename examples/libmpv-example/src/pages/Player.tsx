@@ -36,7 +36,9 @@ const Player = ({ source }: { source: string | null }) => {
       <VideoRect isInitalized={isInitalized} />
       {
         isFullscreen
-          ? visible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
+          ?
+          visible &&
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0 }}>
             <Controls />
           </div>
           : <Controls />
