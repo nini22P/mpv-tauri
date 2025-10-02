@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents, getProperty } from 'tauri-plugin-libmpv-api'
+import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api'
 import usePlayerStore from '../store'
 
 const OBSERVED_PROPERTIES = [

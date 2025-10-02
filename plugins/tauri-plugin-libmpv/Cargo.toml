@@ -20,7 +20,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 raw-window-handle = { workspace = true }
 log = { workspace = true }
-libmpv-sys = { path = "../libmpv-sys", version = "*" }
+libmpv-sys = { git = "https://github.com/nini22P/mpv-tauri.git" }
 glow = "0.16"
 winit = "0.30"
 glutin = "0.32"

@@ -2557,6 +2557,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "libmpv-sys"
+version = "0.1.0"
+source = "git+https://github.com/nini22P/mpv-tauri.git#d87acad7b3085fb939e70f494256e01cc3d26d50"
+
+[[package]]
 name = "libredox"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5102,7 +5107,7 @@ dependencies = [
  "base64 0.22.1",
  "glow",
  "glutin",
- "libmpv-sys",
+ "libmpv-sys 0.1.0 (git+https://github.com/nini22P/mpv-tauri.git)",
  "log",
  "raw-window-handle",
  "serde",
