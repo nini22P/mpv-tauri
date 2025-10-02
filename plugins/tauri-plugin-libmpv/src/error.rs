@@ -1,5 +1,7 @@
 use serde::{ser::Serializer, Serialize};
 
+use crate::libmpv;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -33,16 +35,17 @@ pub enum Error {
     Format(String),
 }
 
-impl From<libmpv2::Error> for Error {
-    fn from(e: libmpv2::Error) -> Self {
-        let error_string = match e {
-            libmpv2::Error::Raw(code) => {
-                let error_name = mpv_error_code_to_name(code);
-                format!("{} ({})", error_name, code)
+impl From<libmpv::Error> for Error {
+    fn from(e: libmpv::Error) -> Self {
+        match e {
+            libmpv::Error::Command { name, code } => {
+                Error::Command(format!("Command '{}' failed: {}", name, code))
             }
-            _ => e.to_string(),
-        };
-        Error::Mpv(error_string)
+            libmpv::Error::SetProperty { key, code } => {
+                Error::SetProperty(format!("Property '{}' failed: {}", key, code))
+            }
+            _ => Error::Mpv(e.to_string()),
+        }
     }
 }
 
@@ -52,33 +55,5 @@ impl Serialize for Error {
         S: Serializer,
     {
         serializer.serialize_str(self.to_string().as_ref())
-    }
-}
-
-pub fn mpv_error_code_to_name(code: i32) -> &'static str {
-    use libmpv2::mpv_error;
-    match code {
-        mpv_error::Success => "Success",
-        mpv_error::EventQueueFull => "EventQueueFull",
-        mpv_error::NoMem => "NoMem",
-        mpv_error::Uninitialized => "Uninitialized",
-        mpv_error::InvalidParameter => "InvalidParameter",
-        mpv_error::OptionNotFound => "OptionNotFound",
-        mpv_error::OptionFormat => "OptionFormat",
-        mpv_error::OptionError => "OptionError",
-        mpv_error::PropertyNotFound => "PropertyNotFound",
-        mpv_error::PropertyFormat => "PropertyFormat",
-        mpv_error::PropertyUnavailable => "PropertyUnavailable",
-        mpv_error::PropertyError => "PropertyError",
-        mpv_error::Command => "Command",
-        mpv_error::LoadingFailed => "LoadingFailed",
-        mpv_error::AoInitFailed => "AoInitFailed",
-        mpv_error::VoInitFailed => "VoInitFailed",
-        mpv_error::NothingToPlay => "NothingToPlay",
-        mpv_error::UnknownFormat => "UnknownFormat",
-        mpv_error::Unsupported => "Unsupported",
-        mpv_error::NotImplemented => "NotImplemented",
-        mpv_error::Generic => "Generic",
-        _ => "UnknownErrorCode",
     }
 }

@@ -1,8 +1,9 @@
 use tauri::{command, AppHandle, Runtime};
 
+use crate::libmpv::MpvFormat;
+use crate::libmpv::PropertyValue;
 use crate::MpvConfig;
 use crate::MpvExt;
-use crate::MpvFormat;
 use crate::Result;
 use crate::VideoMarginRatio;
 
@@ -52,7 +53,7 @@ pub(crate) async fn get_property<R: Runtime>(
     name: String,
     format: MpvFormat,
     window_label: String,
-) -> Result<serde_json::Value> {
+) -> Result<PropertyValue> {
     tauri::async_runtime::spawn_blocking(move || {
         app.mpv().get_property(name, format, &window_label)
     })

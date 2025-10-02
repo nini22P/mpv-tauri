@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api'
+import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents, getProperty } from 'tauri-plugin-libmpv-api'
 import usePlayerStore from '../store'
 
 const OBSERVED_PROPERTIES = [
@@ -64,39 +64,39 @@ const useMpv = () => {
   useEffect(() => {
     const unlistenPromise = observeProperties(
       OBSERVED_PROPERTIES,
-      ({ name, change }) => {
+      ({ name, data }) => {
         if (name !== 'time-pos')
-          console.log(name, change)
+          console.log(name, data)
         switch (name) {
           case 'playlist':
-            updatePlayerState('playlist', JSON.parse(change))
+            updatePlayerState('playlist', JSON.parse(data))
             break
           case 'filename':
-            updatePlayerState('filename', change)
+            updatePlayerState('filename', data)
             break
           case 'pause':
-            updatePlayerState('isPaused', change)
+            updatePlayerState('isPaused', data)
             break
           case 'eof-reached':
-            updatePlayerState('eofReached', change ?? false)
+            updatePlayerState('eofReached', data ?? false)
             break
           case 'time-pos':
-            updatePlayerState('timePos', change ?? 0)
+            updatePlayerState('timePos', data ?? 0)
             break
           case 'duration':
-            updatePlayerState('duration', change ?? 0)
+            updatePlayerState('duration', data ?? 0)
             break
           case 'volume':
-            updatePlayerState('volume', change)
+            updatePlayerState('volume', data)
             break
           case 'mute':
-            updatePlayerState('mute', change)
+            updatePlayerState('mute', data)
             break
           case 'speed':
-            updatePlayerState('speed', change)
+            updatePlayerState('speed', data)
             break
           default:
-            console.log(name, change)
+            console.log(name, data)
             break
         }
       })

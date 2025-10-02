@@ -20,11 +20,11 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 raw-window-handle = { workspace = true }
 log = { workspace = true }
-libmpv2 = "5.0.1"
-libmpv2-sys = "4.0.0"
-glow = "0.16.0"
-winit = "0.30.12"
-glutin = "0.32.3"
+libmpv-sys = { path = "../libmpv-sys", version = "*" }
+glow = "0.16"
+winit = "0.30"
+glutin = "0.32"
+base64 = "0.22.1"
 
 [target.'cfg(windows)'.dependencies]
 

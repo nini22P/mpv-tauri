@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "plugins/tauri-plugin-mpv",
   "plugins/tauri-plugin-libmpv",
+  "plugins/libmpv-sys",
   "examples/mpv-example/src-tauri",
   "examples/libmpv-example/src-tauri",
 ]
