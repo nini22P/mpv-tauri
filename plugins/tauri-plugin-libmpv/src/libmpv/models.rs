@@ -1,7 +1,8 @@
+use super::utils::cstr_to_string;
+use base64::{engine::general_purpose, Engine as _};
 use libmpv_sys;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ffi::CStr;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -66,7 +67,7 @@ impl MpvNode {
                 let json_map = map.into_iter().map(|(k, v)| (k, v.into())).collect();
                 Value::Object(json_map)
             }
-            MpvNode::ByteArray(bytes) => Value::String(base64::encode(&bytes)),
+            MpvNode::ByteArray(bytes) => Value::String(general_purpose::STANDARD.encode(&bytes)),
         }
     }
 
@@ -98,11 +99,4 @@ impl MpvNode {
         };
         Ok(data)
     }
-}
-
-pub unsafe fn cstr_to_string(ptr: *const std::os::raw::c_char) -> String {
-    if ptr.is_null() {
-        return String::new();
-    }
-    CStr::from_ptr(ptr).to_string_lossy().into_owned()
 }

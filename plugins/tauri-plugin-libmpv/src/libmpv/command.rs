@@ -1,0 +1,27 @@
+use std::ffi::CString;
+
+use crate::libmpv::{utils::error_string, Error, Mpv};
+
+impl Mpv {
+    pub fn command(&self, name: &str, args: &[&str]) -> Result<(), Error> {
+        let c_args: Vec<CString> = std::iter::once(name)
+            .chain(args.iter().cloned())
+            .map(CString::new)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut c_pointers: Vec<*const std::os::raw::c_char> =
+            c_args.iter().map(|s| s.as_ptr()).collect();
+        c_pointers.push(std::ptr::null());
+
+        let err = unsafe { libmpv_sys::mpv_command(self.handle, c_pointers.as_mut_ptr()) };
+
+        if err < 0 {
+            return Err(Error::Command {
+                name: name.to_string(),
+                code: error_string(err),
+            });
+        }
+
+        Ok(())
+    }
+}
