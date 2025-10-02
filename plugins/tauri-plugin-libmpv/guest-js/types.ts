@@ -51,7 +51,7 @@ export interface MpvLogMessageEvent extends MpvEventBase<'log-message'> {
 
 export interface MpvGetPropertyReplyEvent extends MpvEventBase<'get-property-reply'> {
   name: string;
-  result: string | boolean | number | unknown;
+  data: string | boolean | number | unknown;
   reply_userdata: number;
 }
 
@@ -66,13 +66,13 @@ export interface MpvCommandReplyEvent extends MpvEventBase<'command-reply'> {
 export type MpvStartFileEvent = MpvEventBase<'start-file'>
 
 export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
-  reason: 'eof' | 'stop' | 'quit' | 'error' | 'redirect';
+  data: 'eof' | 'stop' | 'quit' | 'error' | 'redirect';
 }
 
 export type MpvFileLoadedEvent = MpvEventBase<'file-loaded'>
 
 export interface MpvClientMessageEvent extends MpvEventBase<'client-message'> {
-  message: string[];
+  data: string[];
 }
 
 export type MpvVideoReconfigEvent = MpvEventBase<'video-reconfig'>
@@ -83,7 +83,7 @@ export type MpvPlaybackRestartEvent = MpvEventBase<'playback-restart'>
 export interface MpvPropertyChangeEvent<TName extends string, TValue>
   extends MpvEventBase<'property-change'> {
   name: TName;
-  change: TValue;
+  data: TValue;
   reply_userdata: number;
 }
 

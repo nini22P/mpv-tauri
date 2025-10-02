@@ -12,6 +12,7 @@ mod mobile;
 
 mod commands;
 mod error;
+mod libmpv;
 mod models;
 
 pub use error::{Error, Result};

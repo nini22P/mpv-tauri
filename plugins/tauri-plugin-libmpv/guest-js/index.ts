@@ -111,19 +111,19 @@ export async function destroy(windowLabel?: string): Promise<void> {
  * // Observe properties
  * const unlisten = await observeProperties(
  *   OBSERVED_PROPERTIES,
- *   ({ name, change }) => {
+ *   ({ name, data }) => {
  *     switch (name) {
  *       case 'pause':
- *         console.log('Playback paused state:', change);
+ *         console.log('Playback paused state:', data);
  *         break;
  *       case 'time-pos':
- *         console.log('Current time position:', change);
+ *         console.log('Current time position:', data);
  *         break;
  *       case 'duration':
- *         console.log('Duration:', change);
+ *         console.log('Duration:', data);
  *         break;
  *       case 'filename':
- *         console.log('Current playing file:', change);
+ *         console.log('Current playing file:', data);
  *         break;
  *     }
  *   });
