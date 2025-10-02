@@ -1,4 +1,4 @@
-use crate::libmpv::{cstr_to_string, MpvNode};
+use crate::libmpv::{utils::cstr_to_string, MpvNode};
 use libmpv_sys;
 use log::warn;
 use serde::Serialize;
