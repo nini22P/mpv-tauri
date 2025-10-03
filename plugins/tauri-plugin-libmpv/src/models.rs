@@ -1,14 +1,22 @@
 use glutin::surface::WindowSurface;
 use raw_window_handle::HasWindowHandle;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, num::NonZeroU32};
+use std::{
+    collections::HashMap,
+    num::NonZeroU32,
+    sync::{Arc, Mutex},
+};
 use tauri::{Runtime, WebviewWindow};
 
-use crate::libmpv;
+use crate::libmpv::{self, RenderContext};
 
 pub struct MpvInstance {
     pub mpv: crate::libmpv::Mpv,
 }
+
+pub type GlRenderContext = RenderContext<Arc<glutin::display::Display>>;
+
+pub type SharedRenderContext = Arc<Mutex<GlRenderContext>>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]

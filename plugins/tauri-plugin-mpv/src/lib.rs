@@ -55,55 +55,51 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             app.manage(mpv);
             Ok(())
         })
-        .on_event(|app_handle, event| match event {
-            RunEvent::WindowEvent { label, event, .. } => match event {
-                WindowEvent::CloseRequested { api, .. } => {
-                    let mpv_state = app_handle.state::<Mpv<R>>();
+        .on_event(|app_handle, run_event| {
+            if let RunEvent::WindowEvent {
+                label,
+                event: WindowEvent::CloseRequested { api, .. },
+                ..
+            } = run_event
+            {
+                let mpv_state = app_handle.state::<Mpv<R>>();
 
-                    let instances_lock = match mpv_state.instances.lock() {
-                        Ok(guard) => guard,
-                        Err(poisoned) => {
-                            log::warn!("Mutex for mpv instances was poisoned. Recovering.");
-                            poisoned.into_inner()
-                        }
-                    };
-
-                    if instances_lock.contains_key(label) {
-                        api.prevent_close();
-
-                        let app_handle_clone = app_handle.clone();
-                        let window_label = label.to_string();
-
-                        tauri::async_runtime::spawn(async move {
-                            log::info!(
-                                "Close requested for '{}', destroying mpv instance first...",
-                                &window_label
-                            );
-
-                            if let Err(e) = app_handle_clone.mpv().destroy(&window_label) {
-                                log::error!(
-                                    "Failed to destroy mpv for '{}': {}. Still closing.",
-                                    &window_label,
-                                    e
-                                );
-                            }
-
-                            if let Some(window) = app_handle_clone.get_webview_window(&window_label)
-                            {
-                                if let Err(e) = window.close() {
-                                    log::error!(
-                                        "Failed to close window '{}': {}",
-                                        &window_label,
-                                        e
-                                    );
-                                }
-                            }
-                        });
+                let instances_lock = match mpv_state.instances.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => {
+                        log::warn!("Mutex for mpv instances was poisoned. Recovering.");
+                        poisoned.into_inner()
                     }
+                };
+
+                if instances_lock.contains_key(label) {
+                    api.prevent_close();
+
+                    let app_handle_clone = app_handle.clone();
+                    let window_label = label.to_string();
+
+                    tauri::async_runtime::spawn(async move {
+                        log::info!(
+                            "Close requested for '{}', destroying mpv instance first...",
+                            &window_label
+                        );
+
+                        if let Err(e) = app_handle_clone.mpv().destroy(&window_label) {
+                            log::error!(
+                                "Failed to destroy mpv for '{}': {}. Still closing.",
+                                &window_label,
+                                e
+                            );
+                        }
+
+                        if let Some(window) = app_handle_clone.get_webview_window(&window_label) {
+                            if let Err(e) = window.close() {
+                                log::error!("Failed to close window '{}': {}", &window_label, e);
+                            }
+                        }
+                    });
                 }
-                _ => {}
-            },
-            _ => {}
+            }
         })
         .build()
 }

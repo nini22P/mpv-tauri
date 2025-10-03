@@ -88,7 +88,7 @@ pub fn init_mpv_process<R: Runtime>(
             if let Some(stdout) = child.stdout.take() {
                 thread::spawn(move || {
                     let reader = BufReader::new(stdout);
-                    for line in reader.lines().flatten() {
+                    for line in reader.lines().map_while(Result::ok) {
                         if show_mpv_output {
                             trace!("mpv stdout [{}] {}", window_label_clone, line);
                         }
@@ -116,7 +116,7 @@ pub fn init_mpv_process<R: Runtime>(
                         window_label,
                     );
                     error!("{}", error_message);
-                    error_message.push_str("\n");
+                    error_message.push('\n');
                     if let Ok(mut queue) = log_queue.lock() {
                         while let Some(line) = queue.pop_front() {
                             error!("mpv stdout [{}] {}", window_label, line);
