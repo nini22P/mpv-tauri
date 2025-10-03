@@ -53,11 +53,13 @@ body {
 import { destroy, init, MpvConfig, observeProperties, command, MpvObservableProperty } from 'tauri-plugin-libmpv-api';
 
 // Properties to observe
+// Tip: The optional third element, 'none', signals to TypeScript that the property's value may be null 
+// (e.g., when a file is not loaded), ensuring type safety in the callback function.
 const OBSERVED_PROPERTIES = [
   ['pause', 'flag'],
-  ['time-pos', 'double'],
-  ['duration', 'double'],
-  ['filename', 'string'],
+  ['time-pos', 'double', 'none'],
+  ['duration', 'double', 'none'],
+  ['filename', 'string', 'none'],
 ] as const satisfies MpvObservableProperty[];
 
 // mpv configuration
@@ -85,15 +87,19 @@ const unlisten = await observeProperties(
   ({ name, data }) => {
     switch (name) {
       case 'pause':
+        // data type: boolean
         console.log('Playback paused state:', data);
         break;
       case 'time-pos':
+        // data type: number | null
         console.log('Current time position:', data);
         break;
       case 'duration':
+        // data type: number | null
         console.log('Duration:', data);
         break;
       case 'filename':
+        // data type: string | null
         console.log('Current playing file:', data);
         break;
     }

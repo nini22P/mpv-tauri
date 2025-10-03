@@ -25,12 +25,12 @@ export * from './types'
  * @example
  * ```typescript
  * import { init, MpvConfig, MpvObservableProperty } from 'tauri-plugin-libmpv-api';
- * 
+ * // Note the optional 'none' marker for properties that can be null (e.g., when no file is loaded)
  * const OBSERVED_PROPERTIES = [
  *   ['pause', 'flag'],
- *   ['time-pos', 'double'],
- *   ['duration', 'double'],
- *   ['filename', 'string'],
+ *   ['time-pos', 'double', 'none'],
+ *   ['duration', 'double', 'none'],
+ *   ['filename', 'string', 'none'],
  * ] as const satisfies MpvObservableProperty[];
  * 
  * // mpv configuration
@@ -93,6 +93,8 @@ export async function destroy(windowLabel?: string): Promise<void> {
  * Listen to mpv property change events.
  * 
  * @param {ReadonlyArray<MpvProperty>} properties - An array of tuples, where each tuple is [propertyName, format].
+ * Each tuple is [propertyName, format]. An optional third element, 'none', can be included 
+ * (e.g., ['duration', 'double', 'none']) to signal to TypeScript that the property's value may be null, 
  * @param {(event: MpvEventFromProperties<T[number]>) => void} callback - Function to call when a matching property-change event is received.
  * @param {string} [windowLabel] - Target window label, defaults to current window.
  * @returns {Promise<UnlistenFn>} A function to call to stop listening.
@@ -103,9 +105,9 @@ export async function destroy(windowLabel?: string): Promise<void> {
  * 
  * const OBSERVED_PROPERTIES = [
  *   ['pause', 'flag'],
- *   ['time-pos', 'double'],
- *   ['duration', 'double'],
- *   ['filename', 'string'],
+ *   ['time-pos', 'double', 'none'],
+ *   ['duration', 'double', 'none'],
+ *   ['filename', 'string', 'none'],
  * ] as const satisfies MpvObservableProperty[];
  * 
  * // Observe properties
@@ -116,12 +118,15 @@ export async function destroy(windowLabel?: string): Promise<void> {
  *       case 'pause':
  *         console.log('Playback paused state:', data);
  *         break;
+ *       // data type: number | null
  *       case 'time-pos':
  *         console.log('Current time position:', data);
  *         break;
+ *       // data type: number | null
  *       case 'duration':
  *         console.log('Duration:', data);
  *         break;
+ *       // data type: string | null
  *       case 'filename':
  *         console.log('Current playing file:', data);
  *         break;
@@ -299,13 +304,25 @@ export async function getProperty<T extends MpvFormat>(
   name: string,
   format: T,
   windowLabel?: string,
-): Promise<MpvFormatToType[T]> {
+): Promise<MpvFormatToType[T] | null>
+
+export async function getProperty<R>(
+  name: string,
+  format: MpvFormat,
+  windowLabel?: string,
+): Promise<R>
+
+export async function getProperty<T extends MpvFormat>(
+  name: string,
+  format: T,
+  windowLabel?: string,
+): Promise<unknown> {
 
   if (!windowLabel) {
     windowLabel = getCurrentWindow().label
   }
 
-  return await invoke<MpvFormatToType[T]>('plugin:libmpv|get_property', {
+  return await invoke<MpvFormatToType[T] | null>('plugin:libmpv|get_property', {
     name,
     format,
     windowLabel,
