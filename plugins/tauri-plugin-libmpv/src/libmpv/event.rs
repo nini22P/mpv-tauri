@@ -1,4 +1,4 @@
-use crate::libmpv::{utils::cstr_to_string, Error, MpvNode};
+use crate::libmpv::{utils::cstr_to_string, MpvNode, Result};
 use log::warn;
 use scopeguard::defer;
 use serde::Serialize;
@@ -135,7 +135,7 @@ pub enum Event {
 }
 
 impl Event {
-    pub(crate) unsafe fn from(event: libmpv_sys::mpv_event) -> Result<Option<Self>, Error> {
+    pub(crate) unsafe fn from(event: libmpv_sys::mpv_event) -> Result<Option<Self>> {
         match event.event_id {
             libmpv_sys::mpv_event_id_MPV_EVENT_SHUTDOWN => Ok(Some(Event::Shutdown)),
             libmpv_sys::mpv_event_id_MPV_EVENT_LOG_MESSAGE => {

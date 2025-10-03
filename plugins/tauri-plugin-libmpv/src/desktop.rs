@@ -144,7 +144,7 @@ impl<R: Runtime> Mpv<R> {
                     window_label, e,
                 );
                 error!("{}", error_message);
-                crate::Error::Mpv(error_message)
+                crate::Error::Destroy(error_message)
             })?;
 
             info!(
@@ -692,7 +692,7 @@ fn setup_and_run_render_loop<R: Runtime>(
 
                             app.mpv().remove_render_context(window_label)?;
 
-                            return Err(crate::Error::Mpv(e.to_string()));
+                            return Err(crate::Error::Render(e.to_string()));
                         }
                     }
                 }

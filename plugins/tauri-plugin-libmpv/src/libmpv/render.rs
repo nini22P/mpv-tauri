@@ -4,7 +4,7 @@ use std::ptr;
 use tauri_plugin_libmpv_sys as libmpv_sys;
 
 use crate::libmpv::utils::error_string;
-use crate::libmpv::{self, Error};
+use crate::libmpv::{self, Error, Result};
 
 pub struct OpenGLInitParams<T: Send + 'static> {
     pub get_proc_address: fn(ctx: &T, name: &str) -> *mut c_void,
@@ -61,7 +61,7 @@ unsafe impl<T: Send + 'static> Send for RenderContext<T> {}
 unsafe impl<T: Send + 'static> Sync for RenderContext<T> {}
 
 impl<T: Send + 'static> RenderContext<T> {
-    pub fn new(mpv: &libmpv::Mpv, params: Vec<RenderParam<T>>) -> Result<Self, Error> {
+    pub fn new(mpv: &libmpv::Mpv, params: Vec<RenderParam<T>>) -> Result<Self> {
         let mut trampoline_payload_owner: Option<Box<TrampolinePayload<T>>> = None;
 
         let mut opengl_init_params_owner: Option<Box<libmpv_sys::mpv_opengl_init_params>> = None;
@@ -146,7 +146,7 @@ impl<T: Send + 'static> RenderContext<T> {
         }
     }
 
-    pub fn render(&self, width: i32, height: i32) -> Result<(), Error> {
+    pub fn render(&self, width: i32, height: i32) -> Result<()> {
         let fbo = libmpv_sys::mpv_opengl_fbo {
             fbo: 0,
             w: width,

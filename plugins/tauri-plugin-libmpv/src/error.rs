@@ -1,7 +1,5 @@
 use serde::{ser::Serializer, Serialize};
 
-use crate::libmpv;
-
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -11,6 +9,8 @@ pub enum Error {
     #[cfg(mobile)]
     #[error(transparent)]
     PluginInvoke(#[from] tauri::plugin::mobile::PluginInvokeError),
+    #[error(transparent)]
+    Mpv(#[from] crate::libmpv::Error),
     #[error("Unsupported platform for mpv integration")]
     UnsupportedPlatform,
     #[error("Not found window with label '{0}'")]
@@ -19,8 +19,6 @@ pub enum Error {
     WindowHandle(#[from] raw_window_handle::HandleError),
     #[error("mpv instance not found: {0}")]
     InstanceNotFound(String),
-    #[error("A libmpv error occurred: {0}")]
-    Mpv(String),
     #[error("mpv initialization failed: {0}")]
     Initialization(String),
     #[error("Failed to create mpv client: {0}")]
@@ -33,20 +31,10 @@ pub enum Error {
     GetProperty(String),
     #[error("Invalid format string provided: {0}")]
     Format(String),
-}
-
-impl From<libmpv::Error> for Error {
-    fn from(e: libmpv::Error) -> Self {
-        match e {
-            libmpv::Error::Command { name, code } => {
-                Error::Command(format!("Command '{}' failed: {}", name, code))
-            }
-            libmpv::Error::SetProperty { key, code } => {
-                Error::SetProperty(format!("Property '{}' failed: {}", key, code))
-            }
-            _ => Error::Mpv(e.to_string()),
-        }
-    }
+    #[error("Failed to destroy mpv instance: {0}")]
+    Destroy(String),
+    #[error("Failed to render frame: {0}")]
+    Render(String),
 }
 
 impl Serialize for Error {

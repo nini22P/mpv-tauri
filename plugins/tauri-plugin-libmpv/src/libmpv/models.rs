@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tauri_plugin_libmpv_sys as libmpv_sys;
 
 use super::utils::cstr_to_string;
-use crate::libmpv::Error;
+use crate::libmpv::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -74,7 +74,7 @@ impl MpvNode {
         }
     }
 
-    pub(crate) unsafe fn from_node(node: *const libmpv_sys::mpv_node) -> Result<Self, Error> {
+    pub(crate) unsafe fn from_node(node: *const libmpv_sys::mpv_node) -> Result<Self> {
         match (*node).format {
             libmpv_sys::mpv_format_MPV_FORMAT_NONE => Ok(MpvNode::None),
             libmpv_sys::mpv_format_MPV_FORMAT_STRING => {
@@ -114,9 +114,7 @@ impl MpvNode {
         }
     }
 
-    pub(crate) unsafe fn from_property(
-        property: libmpv_sys::mpv_event_property,
-    ) -> Result<Self, Error> {
+    pub(crate) unsafe fn from_property(property: libmpv_sys::mpv_event_property) -> Result<Self> {
         match property.format {
             libmpv_sys::mpv_format_MPV_FORMAT_NONE => Ok(MpvNode::None),
             libmpv_sys::mpv_format_MPV_FORMAT_STRING
