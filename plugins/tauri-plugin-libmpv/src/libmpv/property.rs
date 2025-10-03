@@ -2,7 +2,7 @@ use scopeguard::defer;
 use std::ffi::CString;
 use tauri_plugin_libmpv_sys as libmpv_sys;
 
-use crate::libmpv::{utils::error_string, Error, Mpv, MpvNode, PropertyValue};
+use crate::libmpv::{utils::error_string, Error, Mpv, MpvNode, PropertyValue, Result};
 
 impl Mpv {
     pub fn observe_property(
@@ -10,7 +10,7 @@ impl Mpv {
         name: &str,
         format: libmpv_sys::mpv_format,
         userdata: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let c_name = CString::new(name)?;
 
         let err = unsafe {
@@ -27,7 +27,7 @@ impl Mpv {
         Ok(())
     }
 
-    pub fn get_property_string(&self, key: &str) -> Result<String, Error> {
+    pub fn get_property_string(&self, key: &str) -> Result<String> {
         let c_key = CString::new(key)?;
 
         let mut data: *mut std::os::raw::c_char = std::ptr::null_mut();
@@ -67,7 +67,7 @@ impl Mpv {
         Ok(result)
     }
 
-    pub fn get_property_flag(&self, key: &str) -> Result<bool, Error> {
+    pub fn get_property_flag(&self, key: &str) -> Result<bool> {
         let c_key = CString::new(key)?;
 
         let mut data: std::os::raw::c_int = 0;
@@ -91,7 +91,7 @@ impl Mpv {
         Ok(data != 0)
     }
 
-    pub fn get_property_int64(&self, key: &str) -> Result<i64, Error> {
+    pub fn get_property_int64(&self, key: &str) -> Result<i64> {
         let c_key = CString::new(key)?;
 
         let mut data: i64 = 0;
@@ -115,7 +115,7 @@ impl Mpv {
         Ok(data)
     }
 
-    pub fn get_property_double(&self, key: &str) -> Result<f64, Error> {
+    pub fn get_property_double(&self, key: &str) -> Result<f64> {
         let c_key = CString::new(key)?;
 
         let mut data: f64 = 0.0;
@@ -139,7 +139,7 @@ impl Mpv {
         Ok(data)
     }
 
-    pub fn get_property_node(&self, key: &str) -> Result<MpvNode, Error> {
+    pub fn get_property_node(&self, key: &str) -> Result<MpvNode> {
         let c_key = CString::new(key)?;
 
         let mut data: *mut libmpv_sys::mpv_node = std::ptr::null_mut();
@@ -175,11 +175,7 @@ impl Mpv {
         Ok(node)
     }
 
-    pub fn get_property(
-        &self,
-        key: &str,
-        format: libmpv_sys::mpv_format,
-    ) -> Result<PropertyValue, Error> {
+    pub fn get_property(&self, key: &str, format: libmpv_sys::mpv_format) -> Result<PropertyValue> {
         match format {
             libmpv_sys::mpv_format_MPV_FORMAT_STRING => {
                 self.get_property_string(key).map(PropertyValue::String)
@@ -203,7 +199,7 @@ impl Mpv {
         }
     }
 
-    pub fn set_property(&self, key: &str, value: PropertyValue) -> Result<(), Error> {
+    pub fn set_property(&self, key: &str, value: PropertyValue) -> Result<()> {
         let c_key = CString::new(key)?;
 
         let err = unsafe {

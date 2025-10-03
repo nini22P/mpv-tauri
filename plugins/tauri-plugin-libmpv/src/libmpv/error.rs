@@ -1,3 +1,5 @@
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Failed to create mpv handle")]
@@ -30,4 +32,6 @@ pub enum Error {
     NodeConversion(String),
     #[error("Failed to convert property: {0}")]
     PropertyConversion(String),
+    #[error("Invalid parameter: {0}")]
+    InvalidParameter(String),
 }

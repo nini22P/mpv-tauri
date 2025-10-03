@@ -11,7 +11,7 @@ mod render;
 mod utils;
 
 pub use builder::MpvBuilder;
-pub use error::Error;
+pub use error::{Error, Result};
 pub use event::Event;
 pub use models::*;
 pub use render::{OpenGLInitParams, RenderContext, RenderParam};
@@ -25,11 +25,11 @@ unsafe impl Send for Mpv {}
 unsafe impl Sync for Mpv {}
 
 impl Mpv {
-    pub fn builder() -> Result<MpvBuilder, Error> {
+    pub fn builder() -> Result<MpvBuilder> {
         MpvBuilder::new()
     }
 
-    pub fn create_client(&self, name: &str) -> Result<Mpv, Error> {
+    pub fn create_client(&self, name: &str) -> Result<Mpv> {
         let c_name = CString::new(name)?;
         let handle = unsafe { libmpv_sys::mpv_create_client(self.handle, c_name.as_ptr()) };
         if handle.is_null() {
@@ -41,7 +41,7 @@ impl Mpv {
         })
     }
 
-    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event, Error>> {
+    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event>> {
         let event_ptr = unsafe { libmpv_sys::mpv_wait_event(self.handle, timeout) };
         if event_ptr.is_null() {
             return None;
