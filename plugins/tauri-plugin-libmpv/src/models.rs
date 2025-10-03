@@ -10,17 +10,12 @@ pub struct MpvInstance {
     pub mpv: crate::libmpv::Mpv,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum MpvIntegration {
+    #[default]
     Wid,
     Render,
-}
-
-impl Default for MpvIntegration {
-    fn default() -> Self {
-        MpvIntegration::Wid
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

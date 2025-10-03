@@ -118,7 +118,7 @@ impl<R: Runtime> Mpv<R> {
         match init_rx.recv() {
             Ok(Ok(())) => {
                 info!("Render mode initialized for window '{}'.", window_label);
-                return Ok(window_label.to_string());
+                Ok(window_label.to_string())
             }
             Ok(Err(e)) => {
                 let error_message = format!(
@@ -126,15 +126,13 @@ impl<R: Runtime> Mpv<R> {
                     window_label
                 );
                 error!("{}: {}", error_message, e);
-                return Err(crate::Error::Initialization(error_message));
+                Err(crate::Error::Initialization(error_message))
             }
-            Err(_) => {
-                return Err(crate::Error::Initialization(format!(
-                    "Render thread for window '{}' terminated unexpectedly during setup.",
-                    window_label
-                )))
-            }
-        };
+            Err(_) => Err(crate::Error::Initialization(format!(
+                "Render thread for window '{}' terminated unexpectedly during setup.",
+                window_label
+            ))),
+        }
     }
 
     pub fn destroy(&self, window_label: &str) -> Result<()> {
@@ -578,7 +576,17 @@ fn setup_and_run_render_loop<R: Runtime>(
 
         drop(render_contexts_lock);
 
-        render_context.lock().unwrap().set_update_callback(move || {
+        let render_context_for_callback = render_context.clone();
+
+        let mut render_context_lock = match render_context_for_callback.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                warn!("Render context mutex was poisoned. Recovering.");
+                poisoned.into_inner()
+            }
+        };
+
+        render_context_lock.set_update_callback(move || {
             redraw_tx.send(MpvThreadEvent::Redraw).ok();
         });
 
@@ -586,11 +594,10 @@ fn setup_and_run_render_loop<R: Runtime>(
             event_tx.send(MpvThreadEvent::MpvEvents).ok();
         });
 
-        window.on_window_event(move |event| match event {
-            tauri::WindowEvent::Resized(_) => {
+        window.on_window_event(move |event| {
+            if let tauri::WindowEvent::Resized(_) = event {
                 resize_tx.send(MpvThreadEvent::Redraw).ok();
             }
-            _ => {}
         });
 
         Ok(Some((
@@ -641,13 +648,16 @@ fn setup_and_run_render_loop<R: Runtime>(
                     }
                     RenderState::Stopped => {}
                 }
+                let render_context_lock = match render_context.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => {
+                        warn!("Render context mutex was poisoned. Recovering.");
+                        poisoned.into_inner()
+                    }
+                };
 
                 if let Ok(size) = window.inner_size() {
-                    if let Err(e) = render_context
-                        .lock()
-                        .unwrap()
-                        .render(size.width as _, size.height as _)
-                    {
+                    if let Err(e) = render_context_lock.render(size.width as _, size.height as _) {
                         error!("Failed to render frame: {}", e);
                     }
                 }
@@ -659,7 +669,7 @@ fn setup_and_run_render_loop<R: Runtime>(
             MpvThreadEvent::MpvEvents => {
                 while let Some(mpv_event) = mpv_client.wait_event(0.0) {
                     match mpv_event {
-                        Ok(libmpv::Event::StartFile) => {
+                        Ok(libmpv::Event::StartFile { .. }) => {
                             state = RenderState::Playing;
                         }
                         Ok(libmpv::Event::EndFile { .. }) => {

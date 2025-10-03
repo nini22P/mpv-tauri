@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { init, observeProperties, MpvConfig, destroy, MpvObservableProperty, listenEvents } from 'tauri-plugin-libmpv-api'
-import usePlayerStore from '../store'
+import usePlayerStore, { MpvPlaylistItem } from '../store'
 
 const OBSERVED_PROPERTIES = [
-  ['playlist', 'string'],
+  ['playlist', 'node'],
   ['filename', 'string'],
   ['pause', 'flag'],
   ['eof-reached', 'flag'],
@@ -69,7 +69,7 @@ const useMpv = () => {
           console.log(name, data)
         switch (name) {
           case 'playlist':
-            updatePlayerState('playlist', JSON.parse(data))
+            updatePlayerState('playlist', data as MpvPlaylistItem[])
             break
           case 'filename':
             updatePlayerState('filename', data)

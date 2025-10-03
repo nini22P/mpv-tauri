@@ -8,7 +8,7 @@ export type MpvFormatToType = {
   node: unknown;
 };
 
-export type MpvObservableFormat = Exclude<MpvFormat, 'node'>;
+export type MpvObservableFormat = MpvFormat;
 
 export type MpvObservableProperty = readonly [string, MpvObservableFormat];
 
@@ -27,6 +27,8 @@ export type MpvEventType =
   | 'start-file'
   | 'end-file'
   | 'file-loaded'
+  | 'idle'
+  | 'tick'
   | 'client-message'
   | 'video-reconfig'
   | 'audio-reconfig'
@@ -34,7 +36,7 @@ export type MpvEventType =
   | 'playback-restart'
   | 'property-change'
   | 'queue-overflow'
-  | 'deprecated';
+  | 'hook';
 
 interface MpvEventBase<E extends MpvEventType> {
   event: E;
@@ -42,34 +44,62 @@ interface MpvEventBase<E extends MpvEventType> {
 
 export type MpvShutdownEvent = MpvEventBase<'shutdown'>
 
-export interface MpvLogMessageEvent extends MpvEventBase<'log-message'> {
+export interface LogMessage {
   prefix: string;
   level: string;
   text: string;
-  log_level: 'debug' | 'error' | 'fatal' | 'info' | 'none' | 'warn' | 'v' | 'trace';
+  log_level: 'none' | 'fatal' | 'error' | 'warn' | 'info' | 'v' | 'debug' | 'trace' | 'unknown';
+}
+
+export interface MpvLogMessageEvent extends MpvEventBase<'log-message'> {
+  data: LogMessage;
 }
 
 export interface MpvGetPropertyReplyEvent extends MpvEventBase<'get-property-reply'> {
   name: string;
   data: string | boolean | number | unknown;
+  error: number;
   reply_userdata: number;
 }
 
 export interface MpvSetPropertyReplyEvent extends MpvEventBase<'set-property-reply'> {
+  error: number;
   reply_userdata: number;
 }
 
 export interface MpvCommandReplyEvent extends MpvEventBase<'command-reply'> {
+  data: string | boolean | number | unknown;
+  error: number;
   reply_userdata: number;
 }
 
-export type MpvStartFileEvent = MpvEventBase<'start-file'>
+export interface StartFile {
+  playlist_entry_id: number;
+}
+
+export interface MpvStartFileEvent extends MpvEventBase<'start-file'> {
+  data: StartFile;
+}
+
+export type EndFileReason = 'eof' | 'stop' | 'quit' | 'error' | 'redirect' | 'unknown';
+
+export type EndFile = {
+  reason: EndFileReason;
+  error: number;
+  playlist_entry_id: number;
+  playlist_insert_id: number;
+  playlist_insert_num_entries: number;
+};
 
 export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
-  data: 'eof' | 'stop' | 'quit' | 'error' | 'redirect';
+  data: EndFile;
 }
 
 export type MpvFileLoadedEvent = MpvEventBase<'file-loaded'>
+
+export type MpvIdleEvent = MpvEventBase<'idle'>
+
+export type MpvTickEvent = MpvEventBase<'tick'>
 
 export interface MpvClientMessageEvent extends MpvEventBase<'client-message'> {
   data: string[];
@@ -95,7 +125,14 @@ export type MpvEventFromProperties<T extends MpvObservableProperty> = T extends 
   : never;
 
 export type MpvQueueOverflowEvent = MpvEventBase<'queue-overflow'>
-export type MpvDeprecatedEvent = MpvEventBase<'deprecated'>
+
+export interface Hook {
+  id: number;
+}
+
+export interface MpvHookEvent extends MpvEventBase<'hook'> {
+  data: Hook;
+}
 
 export type MpvEvent =
   | MpvShutdownEvent
@@ -106,6 +143,8 @@ export type MpvEvent =
   | MpvStartFileEvent
   | MpvEndFileEvent
   | MpvFileLoadedEvent
+  | MpvIdleEvent
+  | MpvTickEvent
   | MpvClientMessageEvent
   | MpvVideoReconfigEvent
   | MpvAudioReconfigEvent
@@ -113,7 +152,7 @@ export type MpvEvent =
   | MpvPlaybackRestartEvent
   | MpvEventFromProperties<MpvObservableProperty>
   | MpvQueueOverflowEvent
-  | MpvDeprecatedEvent;
+  | MpvHookEvent;
 
 export interface VideoMarginRatio {
   left?: number;

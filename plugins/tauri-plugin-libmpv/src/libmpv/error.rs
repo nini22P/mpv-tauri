@@ -26,4 +26,8 @@ pub enum Error {
     LoadConfig { path: String, code: String },
     #[error("Invalid C-style string provided")]
     InvalidCString(#[from] std::ffi::NulError),
+    #[error("Failed to convert node: {0}")]
+    NodeConversion(String),
+    #[error("Failed to convert property: {0}")]
+    PropertyConversion(String),
 }
