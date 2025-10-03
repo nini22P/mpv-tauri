@@ -72,10 +72,8 @@ export interface MpvStartFileEvent extends MpvEventBase<'start-file'> {
   playlist_entry_id: number;
 }
 
-export type EndFileReason = 'eof' | 'stop' | 'quit' | 'error' | 'redirect' | 'unknown';
-
 export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
-  reason: EndFileReason;
+  reason: 'eof' | 'stop' | 'quit' | 'error' | 'redirect' | 'unknown';
   error: number;
   playlist_entry_id: number;
   playlist_insert_id: number;
