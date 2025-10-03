@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { observeMpvProperties, MpvConfig, destroy, init } from 'tauri-plugin-mpv-api'
+import { observeProperties, MpvConfig, destroy, init, listenEvents } from 'tauri-plugin-mpv-api'
 import usePlayerStore from '../store'
 
 const OBSERVED_PROPERTIES = [
@@ -54,7 +54,22 @@ const useMpv = () => {
   }, [])
 
   useEffect(() => {
-    const unlistenPromise = observeMpvProperties(
+    const unlistenPromise = listenEvents(
+      (mpvEvent) => {
+        if (mpvEvent.event == 'property-change' && mpvEvent.name !== 'time-pos') {
+          console.log(mpvEvent)
+        } else if (mpvEvent.event !== 'property-change') {
+          console.log(mpvEvent)
+        }
+      })
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
+
+  useEffect(() => {
+    const unlistenPromise = observeProperties(
       OBSERVED_PROPERTIES,
       ({ name, data }) => {
         if (connection !== 'connected')

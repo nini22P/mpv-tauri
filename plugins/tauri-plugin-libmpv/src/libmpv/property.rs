@@ -9,13 +9,12 @@ impl Mpv {
         &self,
         name: &str,
         format: libmpv_sys::mpv_format,
-        userdata: u64,
+        id: u64,
     ) -> Result<()> {
         let c_name = CString::new(name)?;
 
-        let err = unsafe {
-            libmpv_sys::mpv_observe_property(self.handle, userdata, c_name.as_ptr(), format)
-        };
+        let err =
+            unsafe { libmpv_sys::mpv_observe_property(self.handle, id, c_name.as_ptr(), format) };
 
         if err < 0 {
             return Err(Error::PropertyObserve {

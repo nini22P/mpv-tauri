@@ -56,7 +56,7 @@ import {
   command,
   setProperty,
   getProperty,
-  observeMpvProperties,
+  observeProperties,
   MpvConfig
 } from "tauri-plugin-mpv-api";
 
@@ -83,7 +83,7 @@ try {
 }
 
 // Observe properties
-const unlisten = await observeMpvProperties(
+const unlisten = await observeProperties(
   OBSERVED_PROPERTIES,
   ({ name, data }) => {
     switch (name) {

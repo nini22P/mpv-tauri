@@ -6,7 +6,7 @@ use tauri_plugin_libmpv_sys as libmpv_sys;
 use super::utils::cstr_to_string;
 use crate::libmpv::{Error, Result};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MpvFormat {
     String,
