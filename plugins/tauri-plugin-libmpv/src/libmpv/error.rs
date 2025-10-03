@@ -11,7 +11,7 @@ pub enum Error {
     #[error("Failed to get property '{key}': {code}")]
     GetProperty { key: String, code: String },
     #[error("Error processing event (id: {event_id}): {code}")]
-    EventError { code: String, event_id: String },
+    Event { code: String, event_id: String },
     #[error("Failed to create render context: {0}")]
     RenderContextCreation(String),
     #[error("Failed to render frame: {0}")]

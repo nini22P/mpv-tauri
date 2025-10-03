@@ -10,7 +10,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use tauri::Emitter;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::libmpv::{MpvFormat, OpenGLInitParams, PropertyValue, RenderContext, RenderParam};
+use crate::libmpv::{MpvFormat, OpenGLInitParams, PropertyValue, RenderParam};
 use crate::{libmpv, models::*};
 use crate::{MpvExt, Result};
 
@@ -30,8 +30,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mpv<R: Runtime> {
     app: AppHandle<R>,
     pub instances: Mutex<HashMap<String, MpvInstance>>,
-    pub render_contexts:
-        Mutex<HashMap<String, Arc<Mutex<RenderContext<Arc<glutin::display::Display>>>>>>,
+    pub render_contexts: Mutex<HashMap<String, SharedRenderContext>>,
 }
 
 impl<R: Runtime> Mpv<R> {
@@ -338,10 +337,7 @@ impl<R: Runtime> Mpv<R> {
         Ok(instances_lock.remove(window_label))
     }
 
-    fn remove_render_context(
-        &self,
-        window_label: &str,
-    ) -> Result<Option<Arc<Mutex<RenderContext<Arc<glutin::display::Display>>>>>> {
+    fn remove_render_context(&self, window_label: &str) -> Result<Option<SharedRenderContext>> {
         let mut render_contexts_lock = match self.render_contexts.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {
