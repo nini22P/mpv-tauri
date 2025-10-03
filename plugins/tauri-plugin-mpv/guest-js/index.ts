@@ -138,12 +138,12 @@ export const destroyMpv = destroy
  * 
  * @example
  * ```typescript
- * import { observeMpvProperties } from 'tauri-plugin-mpv-api';
+ * import { observeProperties } from 'tauri-plugin-mpv-api';
  * 
  * const OBSERVED_PROPERTIES = ['pause', 'time-pos', 'duration', 'filename'] as const;
  * 
  * // Observe properties
- * const unlisten = await observeMpvProperties(
+ * const unlisten = await observeProperties(
  *   OBSERVED_PROPERTIES,
  *   ({ name, data }) => {
  *     switch (name) {
@@ -166,7 +166,7 @@ export const destroyMpv = destroy
  * unlisten();
  * ```
  */
-export async function observeMpvProperties<T extends ReadonlyArray<string>>(
+export async function observeProperties<T extends ReadonlyArray<string>>(
   properties: T,
   callback: (event: MpvPropertyEventFor<T[number]>) => void,
   windowLabel?: string
@@ -181,10 +181,10 @@ export async function observeMpvProperties<T extends ReadonlyArray<string>>(
  * 
  * @example
  * ```typescript
- * import { observeMpvProperties } from 'tauri-plugin-mpv-api';
+ * import { observeProperties } from 'tauri-plugin-mpv-api';
  * 
  * // Observe properties
- * const unlisten = await observeMpvProperties(
+ * const unlisten = await observeProperties(
  *   ({ name, data }) => {
  *     switch (name) {
  *       case 'pause':
@@ -206,12 +206,12 @@ export async function observeMpvProperties<T extends ReadonlyArray<string>>(
  * unlisten();
  * ```
  */
-export async function observeMpvProperties(
+export async function observeProperties(
   callback: (event: MpvPropertyEventFor<typeof COMMON_PROPERTIES[number]>) => void,
   windowLabel?: string
 ): Promise<UnlistenFn>;
 
-export async function observeMpvProperties(
+export async function observeProperties(
   arg1: ReadonlyArray<string> | ((event: unknown) => void),
   arg2?: ((event: unknown) => void) | string,
   arg3?: string
@@ -230,7 +230,7 @@ export async function observeMpvProperties(
     windowLabel = arg3
   }
 
-  return await listenMpvEvents(
+  return await listenEvents(
     (mpvEvent) => {
       if (mpvEvent.event === 'property-change') {
         if (properties.includes(mpvEvent.name)) {
@@ -242,6 +242,11 @@ export async function observeMpvProperties(
   )
 }
 
+/**
+ * @deprecated Use `observeProperties()` instead. This function will be removed in a future version.
+ */
+export const observeMpvProperties = observeProperties
+
 
 /**
  * Listen to all mpv events.
@@ -252,10 +257,10 @@ export async function observeMpvProperties(
  * 
  * @example
  * ```typescript
- * import { listenMpvEvents } from 'tauri-plugin-mpv-api';
+ * import { listenEvents } from 'tauri-plugin-mpv-api';
  * 
  * // Listen events
- * const unlisten = await listenMpvEvents((mpvEvent) => {
+ * const unlisten = await listenEvents((mpvEvent) => {
  *   if (mpvEvent.event === 'property-change') {
  *     const { name, data } = mpvEvent
  *     switch (name) {
@@ -279,7 +284,7 @@ export async function observeMpvProperties(
  * unlisten();
  * ```
  */
-export async function listenMpvEvents(
+export async function listenEvents(
   callback: (event: MpvEvent) => void,
   windowLabel?: string
 ): Promise<UnlistenFn> {
@@ -290,6 +295,11 @@ export async function listenMpvEvents(
 
   return await listen<MpvEvent>(eventName, (event) => callback(event.payload))
 }
+
+/**
+ * @deprecated Use `listenEvents()` instead. This function will be removed in a future version.
+ */
+export const listenMpvEvents = listenEvents
 
 
 /**

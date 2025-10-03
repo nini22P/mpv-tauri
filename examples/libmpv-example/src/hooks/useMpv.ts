@@ -51,7 +51,9 @@ const useMpv = () => {
   useEffect(() => {
     const unlistenPromise = listenEvents(
       (mpvEvent) => {
-        if (mpvEvent.event !== 'property-change') {
+        if (mpvEvent.event == 'property-change' && mpvEvent.name !== 'time-pos') {
+          console.log(mpvEvent)
+        } else if (mpvEvent.event !== 'property-change') {
           console.log(mpvEvent)
         }
       })
@@ -65,8 +67,6 @@ const useMpv = () => {
     const unlistenPromise = observeProperties(
       OBSERVED_PROPERTIES,
       ({ name, data }) => {
-        if (name !== 'time-pos')
-          console.log(name, data)
         switch (name) {
           case 'playlist':
             updatePlayerState('playlist', data as MpvPlaylistItem[])

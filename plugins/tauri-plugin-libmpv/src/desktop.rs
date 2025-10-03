@@ -399,12 +399,15 @@ fn start_event_loop<R: Runtime>(
         window_label
     );
 
-    for (prop, format) in observed_properties {
+    for (i, (prop, format)) in observed_properties.iter().enumerate() {
+        let property_id = (i + 1) as u64;
+
         info!(
-            "Observing property '{}' with format '{:?}' for window '{}'",
-            prop, format, window_label
+            "Observing property '{}' (ID: {}) with format '{:?}' for window '{}'",
+            prop, property_id, format, window_label
         );
-        mpv_client.observe_property(&prop, format.into(), 0)?;
+
+        mpv_client.observe_property(prop, (*format).into(), property_id)?;
     }
 
     std::thread::spawn(move || 'event_loop: loop {
