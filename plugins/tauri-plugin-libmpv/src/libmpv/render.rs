@@ -1,9 +1,10 @@
-use libmpv_sys as sys;
 use std::ffi::{c_char, c_void, CStr};
 use std::marker::PhantomData;
 use std::ptr;
+use tauri_plugin_libmpv_sys as libmpv_sys;
 
-use crate::libmpv;
+use crate::libmpv::utils::error_string;
+use crate::libmpv::{self, Error};
 
 pub struct OpenGLInitParams<T: Send + 'static> {
     pub get_proc_address: fn(ctx: &T, name: &str) -> *mut c_void,
@@ -48,11 +49,11 @@ extern "C" fn update_callback_c(data: *mut c_void) {
 }
 
 pub struct RenderContext<T: Send + 'static> {
-    pub ctx: *mut sys::mpv_render_context,
+    pub ctx: *mut libmpv_sys::mpv_render_context,
     update_callback_data: *mut UpdateCallbackData,
     _trampoline_payload_owner: Option<Box<TrampolinePayload<T>>>,
 
-    _opengl_init_params_owner: Option<Box<sys::mpv_opengl_init_params>>,
+    _opengl_init_params_owner: Option<Box<libmpv_sys::mpv_opengl_init_params>>,
     _phantom: PhantomData<T>,
 }
 
@@ -60,18 +61,18 @@ unsafe impl<T: Send + 'static> Send for RenderContext<T> {}
 unsafe impl<T: Send + 'static> Sync for RenderContext<T> {}
 
 impl<T: Send + 'static> RenderContext<T> {
-    pub fn new(mpv: &libmpv::Mpv, params: Vec<RenderParam<T>>) -> Result<Self, String> {
+    pub fn new(mpv: &libmpv::Mpv, params: Vec<RenderParam<T>>) -> Result<Self, Error> {
         let mut trampoline_payload_owner: Option<Box<TrampolinePayload<T>>> = None;
 
-        let mut opengl_init_params_owner: Option<Box<sys::mpv_opengl_init_params>> = None;
-        let mut mpv_params: Vec<sys::mpv_render_param> = Vec::new();
+        let mut opengl_init_params_owner: Option<Box<libmpv_sys::mpv_opengl_init_params>> = None;
+        let mut mpv_params: Vec<libmpv_sys::mpv_render_param> = Vec::new();
 
         for param in params {
             match param {
                 RenderParam::ApiTypeOpenGL => {
-                    mpv_params.push(sys::mpv_render_param {
-                        type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_API_TYPE,
-                        data: sys::MPV_RENDER_API_TYPE_OPENGL.as_ptr() as *mut _,
+                    mpv_params.push(libmpv_sys::mpv_render_param {
+                        type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_API_TYPE,
+                        data: libmpv_sys::MPV_RENDER_API_TYPE_OPENGL.as_ptr() as *mut _,
                     });
                 }
                 RenderParam::InitParams(gl_params) => {
@@ -81,15 +82,16 @@ impl<T: Send + 'static> RenderContext<T> {
                     });
                     let payload_ptr = &*payload as *const _ as *mut c_void;
 
-                    let opengl_init_params = Box::new(sys::mpv_opengl_init_params {
+                    let opengl_init_params = Box::new(libmpv_sys::mpv_opengl_init_params {
                         get_proc_address: Some(get_proc_address_trampoline::<T>),
                         get_proc_address_ctx: payload_ptr,
                     });
 
                     let params_ptr = &*opengl_init_params as *const _ as *mut c_void;
 
-                    mpv_params.push(sys::mpv_render_param {
-                        type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
+                    mpv_params.push(libmpv_sys::mpv_render_param {
+                        type_:
+                            libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
 
                         data: params_ptr,
                     });
@@ -101,17 +103,17 @@ impl<T: Send + 'static> RenderContext<T> {
             }
         }
 
-        mpv_params.push(sys::mpv_render_param {
-            type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_INVALID,
+        mpv_params.push(libmpv_sys::mpv_render_param {
+            type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_INVALID,
             data: ptr::null_mut(),
         });
 
-        let mut ctx: *mut sys::mpv_render_context = ptr::null_mut();
+        let mut ctx: *mut libmpv_sys::mpv_render_context = ptr::null_mut();
         let err = unsafe {
-            sys::mpv_render_context_create(&mut ctx, mpv.handle, mpv_params.as_mut_ptr())
+            libmpv_sys::mpv_render_context_create(&mut ctx, mpv.handle, mpv_params.as_mut_ptr())
         };
         if err < 0 {
-            return Err(format!("Failed to create render context: {}", err));
+            return Err(Error::RenderContextCreation(error_string(err)));
         }
 
         Ok(Self {
@@ -136,7 +138,7 @@ impl<T: Send + 'static> RenderContext<T> {
         let data_ptr = Box::into_raw(callback_data);
         self.update_callback_data = data_ptr;
         unsafe {
-            sys::mpv_render_context_set_update_callback(
+            libmpv_sys::mpv_render_context_set_update_callback(
                 self.ctx,
                 Some(update_callback_c),
                 data_ptr as *mut c_void,
@@ -144,8 +146,8 @@ impl<T: Send + 'static> RenderContext<T> {
         }
     }
 
-    pub fn render(&self, width: i32, height: i32) -> Result<(), String> {
-        let fbo = sys::mpv_opengl_fbo {
+    pub fn render(&self, width: i32, height: i32) -> Result<(), Error> {
+        let fbo = libmpv_sys::mpv_opengl_fbo {
             fbo: 0,
             w: width,
             h: height,
@@ -153,22 +155,22 @@ impl<T: Send + 'static> RenderContext<T> {
         };
         let mut flip_y: i32 = 1;
         let mut params = [
-            sys::mpv_render_param {
-                type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_FBO,
+            libmpv_sys::mpv_render_param {
+                type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_FBO,
                 data: &fbo as *const _ as *mut c_void,
             },
-            sys::mpv_render_param {
-                type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_FLIP_Y,
+            libmpv_sys::mpv_render_param {
+                type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_FLIP_Y,
                 data: &mut flip_y as *mut _ as *mut c_void,
             },
-            sys::mpv_render_param {
-                type_: sys::mpv_render_param_type_MPV_RENDER_PARAM_INVALID,
+            libmpv_sys::mpv_render_param {
+                type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_INVALID,
                 data: ptr::null_mut(),
             },
         ];
-        let err = unsafe { sys::mpv_render_context_render(self.ctx, params.as_mut_ptr()) };
+        let err = unsafe { libmpv_sys::mpv_render_context_render(self.ctx, params.as_mut_ptr()) };
         if err < 0 {
-            return Err(format!("Failed to render: {}", err));
+            return Err(Error::Render(error_string(err)));
         }
         Ok(())
     }
@@ -178,7 +180,7 @@ impl<T: Send + 'static> Drop for RenderContext<T> {
     fn drop(&mut self) {
         unsafe {
             if !self.ctx.is_null() {
-                sys::mpv_render_context_set_update_callback(self.ctx, None, ptr::null_mut());
+                libmpv_sys::mpv_render_context_set_update_callback(self.ctx, None, ptr::null_mut());
             }
         }
 
@@ -187,7 +189,7 @@ impl<T: Send + 'static> Drop for RenderContext<T> {
             self.update_callback_data = ptr::null_mut();
         }
         if !self.ctx.is_null() {
-            unsafe { sys::mpv_render_context_free(self.ctx) };
+            unsafe { libmpv_sys::mpv_render_context_free(self.ctx) };
         }
     }
 }

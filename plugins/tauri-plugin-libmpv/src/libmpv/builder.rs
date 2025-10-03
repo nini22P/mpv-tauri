@@ -1,4 +1,5 @@
 use std::ffi::CString;
+use tauri_plugin_libmpv_sys as libmpv_sys;
 
 use crate::libmpv::{utils::error_string, Error, Mpv};
 

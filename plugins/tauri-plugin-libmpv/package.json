@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "author": "22",
   "description": "A Tauri plugin for embedding the libmpv player in your app via libmpv.",
-  "license": "LGPL-2.1",
+  "license": "MPL-2.0",
   "type": "module",
   "homepage": "https://github.com/nini22P/mpv-tauri/tree/main/plugins/tauri-plugin-libmpv",
   "repository": {

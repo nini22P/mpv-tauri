@@ -1,13 +1,13 @@
-use libmpv_sys;
 use std::ffi::{c_void, CString};
+use tauri_plugin_libmpv_sys as libmpv_sys;
 
+mod builder;
+mod command;
 mod error;
 mod event;
 mod models;
-mod render;
-mod builder;
 mod property;
-mod command;
+mod render;
 mod utils;
 
 pub use builder::MpvBuilder;
@@ -41,7 +41,7 @@ impl Mpv {
         })
     }
 
-    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event, String>> {
+    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event, Error>> {
         let event_ptr = unsafe { libmpv_sys::mpv_wait_event(self.handle, timeout) };
         if event_ptr.is_null() {
             return None;

@@ -2363,9 +2363,9 @@ checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
@@ -2547,19 +2547,6 @@ dependencies = [
  "cfg-if",
  "windows-link 0.2.0",
 ]
-
-[[package]]
-name = "libmpv-sys"
-version = "0.1.0"
-dependencies = [
- "bindgen",
- "reqwest",
-]
-
-[[package]]
-name = "libmpv-sys"
-version = "0.1.0"
-source = "git+https://github.com/nini22P/mpv-tauri.git#d87acad7b3085fb939e70f494256e01cc3d26d50"
 
 [[package]]
 name = "libredox"
@@ -5107,16 +5094,26 @@ dependencies = [
  "base64 0.22.1",
  "glow",
  "glutin",
+ "indexmap 2.11.4",
  "libc",
- "libmpv-sys 0.1.0 (git+https://github.com/nini22P/mpv-tauri.git)",
  "log",
  "raw-window-handle",
+ "scopeguard",
  "serde",
  "serde_json",
  "tauri",
  "tauri-plugin",
+ "tauri-plugin-libmpv-sys",
  "thiserror 2.0.16",
  "winit",
+]
+
+[[package]]
+name = "tauri-plugin-libmpv-sys"
+version = "0.1.0"
+dependencies = [
+ "bindgen",
+ "reqwest",
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 use std::ffi::CStr;
+use tauri_plugin_libmpv_sys as libmpv_sys;
 
 pub(crate) fn error_string(err: i32) -> String {
     unsafe {

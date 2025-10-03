@@ -174,7 +174,7 @@ pub fn init_mpv_process<R: Runtime>(
                 mpv_path,
                 args_clone.join(" ")
             );
-            return Err(crate::Error::MpvProcessError(error_message));
+            Err(crate::Error::MpvProcessError(error_message))
         }
     }
 }
@@ -209,7 +209,7 @@ pub fn kill_mpv_process<R: Runtime>(app: &AppHandle<R>, window_label: &str) -> c
                     e,
                 );
                 error!("{}", error_message);
-                return Err(crate::Error::MpvProcessError(error_message));
+                Err(crate::Error::MpvProcessError(error_message))
             }
         }
     } else {

@@ -55,7 +55,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             app.manage(mpv);
             Ok(())
         })
-        .on_event(|app_handle, event| match event {
+        .on_event(|app_handle, run_event| match run_event {
             RunEvent::WindowEvent { label, event, .. } => match event {
                 WindowEvent::CloseRequested { api, .. } => {
                     let mpv_state = app_handle.state::<Mpv<R>>();
