@@ -20,6 +20,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 raw-window-handle = { workspace = true }
 log = { workspace = true }
+libc = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 

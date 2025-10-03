@@ -43,6 +43,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::set_video_margin_ratio,
         ])
         .setup(|app, api| {
+            unsafe {
+                let locale = std::ffi::CString::new("C").unwrap();
+                libc::setlocale(libc::LC_NUMERIC, locale.as_ptr());
+            }
+
             #[cfg(mobile)]
             let mpv = mobile::init(app, api)?;
             #[cfg(desktop)]
