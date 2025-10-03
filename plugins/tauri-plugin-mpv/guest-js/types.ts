@@ -93,31 +93,43 @@ export interface MpvCommandResponse {
  * @see {@link https://mpv.io/manual/master/#list-of-events}
  */
 export type MpvEventType =
-  | 'start-file'
-  | 'end-file'
-  | 'file-loaded'
-  | 'seek'
-  | 'playback-restart'
-  | 'shutdown'
   | 'log-message'
-  | 'hook'
   | 'get-property-reply'
   | 'set-property-reply'
   | 'command-reply'
+  | 'start-file'
+  | 'end-file'
+  | 'file-loaded'
+  | 'idle'
+  | 'tick'
   | 'client-message'
   | 'video-reconfig'
   | 'audio-reconfig'
+  | 'seek'
+  | 'playback-restart'
   | 'property-change'
+  | 'queue-overflow'
+  | 'hook';
 
 interface MpvEventBase<E extends MpvEventType> {
   event: E;
-  error?: string;
-  id?: number;
+}
+
+export interface MpvStartFileEvent extends MpvEventBase<'start-file'> {
+  playlist_entry_id: number;
+}
+
+export type EndFileReason = 'eof' | 'stop' | 'quit' | 'error' | 'redirect' | 'unknown';
+
+export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
+  reason: EndFileReason;
+  playlist_entry_id: number;
 }
 
 export interface PropertyChangeEvent extends MpvEventBase<'property-change'> {
   name: string;
   data: unknown;
+  id: number;
 }
 
 export interface OtherMpvEvent extends MpvEventBase<Exclude<MpvEventType, 'property-change'>> {
@@ -125,6 +137,8 @@ export interface OtherMpvEvent extends MpvEventBase<Exclude<MpvEventType, 'prope
 }
 
 export type MpvEvent =
+  | MpvStartFileEvent
+  | MpvEndFileEvent
   | PropertyChangeEvent
   | OtherMpvEvent;
 
