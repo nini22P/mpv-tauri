@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-libmpv"
-version = "0.0.2"
+version = "0.1.0"
 authors = ["22"]
 description = "A Tauri plugin for embedding the mpv player in your app via libmpv."
 edition = "2021"
@@ -21,7 +21,7 @@ thiserror = { workspace = true }
 raw-window-handle = { workspace = true }
 log = { workspace = true }
 libc = { workspace = true }
-tauri-plugin-libmpv-sys = { path = "../libmpv-sys", version = "0.1.0" }
+tauri-plugin-libmpv-sys = { version = "0.1.0" }
 glow = "0.16"
 winit = "0.30"
 glutin = "0.32"

@@ -5089,7 +5089,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-libmpv"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "glow",
@@ -5103,7 +5103,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-plugin",
- "tauri-plugin-libmpv-sys",
+ "tauri-plugin-libmpv-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.16",
  "winit",
 ]
@@ -5115,6 +5115,12 @@ dependencies = [
  "bindgen",
  "reqwest",
 ]
+
+[[package]]
+name = "tauri-plugin-libmpv-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3ce7918222a39a894fdfcd8cb0cd6cd700034f1242d7eeecfc16d546b308871"
 
 [[package]]
 name = "tauri-plugin-log"
@@ -5140,7 +5146,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-mpv"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "libc",
  "log",
