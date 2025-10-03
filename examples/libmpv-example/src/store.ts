@@ -37,15 +37,15 @@ export interface PlayerStoreState {
   isInitalized: boolean;
   isPaused: boolean;
   playlist: MpvPlaylistItem[];
-  filename: string | undefined;
+  filename: string | null;
   eofReached: boolean;
   timePos: number;
   duration: number;
   isFullscreen: boolean;
-  volume: number | undefined;
-  mute: boolean | undefined;
-  speed: number | undefined;
-  percentPos: number | undefined;
+  volume: number | null;
+  mute: boolean | null;
+  speed: number | null;
+  percentPos: number | null;
 }
 
 export interface PlayerStroeActions {
@@ -56,7 +56,7 @@ const usePlayerStoreBase = create<PlayerStoreState & PlayerStroeActions>((set) =
   integrationMode: 'wid',
   isInitalized: false,
   isPaused: true,
-  filename: undefined,
+  filename: null,
   playlist: [],
   eofReached: false,
   timePos: 0,

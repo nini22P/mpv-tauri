@@ -4,11 +4,11 @@ import usePlayerStore, { MpvPlaylistItem } from '../store'
 
 const OBSERVED_PROPERTIES = [
   ['playlist', 'node'],
-  ['filename', 'string'],
+  ['filename', 'string', 'none'],
   ['pause', 'flag'],
-  ['eof-reached', 'flag'],
-  ['time-pos', 'double'],
-  ['duration', 'double'],
+  ['eof-reached', 'flag', 'none'],
+  ['time-pos', 'double', 'none'],
+  ['duration', 'double', 'none'],
   ['volume', 'double'],
   ['mute', 'flag'],
   ['speed', 'double'],

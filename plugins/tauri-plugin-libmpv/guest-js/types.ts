@@ -10,7 +10,21 @@ export type MpvFormatToType = {
 
 export type MpvObservableFormat = MpvFormat;
 
-export type MpvObservableProperty = readonly [string, MpvObservableFormat];
+export type MpvObservableProperty =
+  | readonly [string, MpvObservableFormat]
+  | readonly [string, MpvObservableFormat, 'none', ...unknown[]];
+
+export type MpvPropertyData<T extends MpvObservableProperty> =
+  T extends readonly [
+    infer _,
+    infer TFormat extends MpvObservableFormat,
+    'none',
+    ...unknown[],
+  ]
+  ? MpvFormatToType[TFormat] | null
+  : T extends readonly [infer _, infer TFormat extends MpvObservableFormat]
+  ? MpvFormatToType[TFormat]
+  : never;
 
 export interface MpvConfig {
   integrationMode?: 'wid' | 'render';
@@ -104,9 +118,9 @@ export interface MpvPropertyChangeEvent<TName extends string, TValue>
 
 export type MpvEventFromProperties<T extends MpvObservableProperty> = T extends readonly [
   infer TName extends string,
-  infer TFormat extends MpvObservableFormat
+  ...unknown[],
 ]
-  ? MpvPropertyChangeEvent<TName, MpvFormatToType[TFormat]>
+  ? MpvPropertyChangeEvent<TName, MpvPropertyData<T>>
   : never;
 
 export type MpvQueueOverflowEvent = MpvEventBase<'queue-overflow'>
