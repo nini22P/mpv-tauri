@@ -5,6 +5,7 @@
 - Add types for `start-file` and `end-file` events.
 - Set LC_NUMERIC on setup.
 - Re-license to MPL-2.0.
+- Allow overriding `wid` option.
 
 ## v0.4.0
 

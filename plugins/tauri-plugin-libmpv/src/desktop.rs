@@ -48,16 +48,20 @@ impl<R: Runtime> Mpv<R> {
     }
 
     fn init_wid_mode(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        let window = self
-            .app
-            .get_webview_window(window_label)
-            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
-        let window_handle = window.window_handle()?;
-        let raw_window_handle = window_handle.as_raw();
-        let wid = get_wid(raw_window_handle)?;
-
         let mut initial_options = mpv_config.initial_options.clone();
-        initial_options.insert("wid".to_string(), serde_json::json!(wid));
+
+        if !initial_options.contains_key("wid") {
+            let window = self
+                .app
+                .get_webview_window(window_label)
+                .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+            let window_handle = window.window_handle()?;
+            let raw_window_handle = window_handle.as_raw();
+
+            let wid = get_wid(raw_window_handle)?;
+
+            initial_options.insert("wid".to_string(), serde_json::json!(wid));
+        }
 
         let Some(mut instances_lock) = self.lock_and_check_existence(window_label)? else {
             return Ok(window_label.to_string());
@@ -615,14 +619,14 @@ fn setup_mpv_rendering<R: Runtime>(
 
     let display = Arc::new(unsafe {
         #[cfg(windows)]
-        let preference = { DisplayApiPreference::WglThenEgl(Some(raw_window_handle)) };
+        let preference = DisplayApiPreference::WglThenEgl(Some(raw_window_handle));
 
         #[cfg(all(unix, not(target_os = "macos")))]
         let preference = {
-            match raw_window_handle {
-                raw_window_handle::RawWindowHandle::Wayland(_) => DisplayApiPreference::Egl,
-                raw_window_handle::RawWindowHandle::Xlib(_)
-                | raw_window_handle::RawWindowHandle::Xcb(_) => DisplayApiPreference::GlxThenEgl(
+            match raw_display_handle {
+                raw_window_handle::RawDisplayHandle::Wayland(_) => DisplayApiPreference::Egl,
+                raw_window_handle::RawDisplayHandle::Xlib(_)
+                | raw_window_handle::RawDisplayHandle::Xcb(_) => DisplayApiPreference::GlxThenEgl(
                     Box::new(winit::platform::x11::register_xlib_error_hook),
                 ),
                 _ => DisplayApiPreference::Egl,
