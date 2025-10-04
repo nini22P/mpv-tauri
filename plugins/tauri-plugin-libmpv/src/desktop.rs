@@ -2,7 +2,7 @@ use glutin::context::NotCurrentGlContext;
 use glutin::display::{Display, DisplayApiPreference, GlDisplay};
 use glutin::surface::GlSurface;
 use log::{error, info, trace, warn};
-use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
@@ -460,161 +460,24 @@ fn spawn_render_thread<R: Runtime>(
 
 fn setup_and_run_render_loop<R: Runtime>(
     app: AppHandle<R>,
-    mut mpv_client: libmpv::Mpv,
+    mpv_client: libmpv::Mpv,
     window_label: &str,
     init_tx: mpsc::Sender<Result<()>>,
 ) -> Result<()> {
-    let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
+    let setup_result = setup_mpv_rendering(app.clone(), mpv_client, window_label);
 
-    let redraw_tx = event_tx.clone();
-    let redraw_tx_for_stop = event_tx.clone();
-    let resize_tx = event_tx.clone();
-
-    let setup_result = (|| -> Result<Option<(_, _, _, _, _, _)>> {
-        let mut render_contexts_lock = match app.mpv().render_contexts.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                warn!("Mutex for render contexts was poisoned. Recovering.");
-                poisoned.into_inner()
-            }
-        };
-        if render_contexts_lock.contains_key(window_label) {
-            info!(
-                "display for window '{}' already exists. Skipping initialization.",
-                window_label
-            );
-            return Ok(None);
-        }
-
-        let window = app
-            .get_webview_window(window_label)
-            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
-        let window_handle = window.window_handle()?;
-        let raw_window_handle = window_handle.as_raw();
-        let display_handle = window.display_handle()?;
-        let raw_display_handle = display_handle.as_raw();
-
-        let surface_attributes = window.build_surface_attributes(Default::default())?;
-
-        let template = glutin::config::ConfigTemplateBuilder::new()
-            .compatible_with_native_window(raw_window_handle);
-
-        let display = Arc::new(unsafe {
-            #[cfg(windows)]
-            let preference = { DisplayApiPreference::WglThenEgl(Some(raw_window_handle)) };
-
-            #[cfg(all(unix, not(target_os = "macos")))]
-            let preference = {
-                match raw_window_handle {
-                    RawWindowHandle::Wayland(_) => DisplayApiPreference::Egl,
-                    RawWindowHandle::Xlib(_) | RawWindowHandle::Xcb(_) => {
-                        DisplayApiPreference::GlxThenEgl(Box::new(
-                            winit::platform::x11::register_xlib_error_hook,
-                        ))
-                    }
-                    _ => DisplayApiPreference::Egl,
-                }
-            };
-
-            #[cfg(target_os = "macos")]
-            let preference = DisplayApiPreference::Cgl;
-
-            match Display::new(raw_display_handle, preference) {
-                Ok(display) => display,
-                Err(e) => {
-                    let error_message = format!("Failed to create glutin display: {}", e);
-                    error!("{}", error_message);
-                    return Err(crate::Error::UnsupportedPlatform(error_message).into());
-                }
-            }
-        });
-
-        let config = unsafe {
-            display
-                .find_configs(template.build())
-                .map_err(|e| {
-                    crate::Error::Initialization(format!("Failed to find GL configs: {}", e))
-                })?
-                .next()
-                .ok_or_else(|| {
-                    crate::Error::Initialization("No suitable GL config found".to_string())
-                })?
-        };
-
-        let surface = unsafe {
-            display
-                .create_window_surface(&config, &surface_attributes)
-                .map_err(|e| {
-                    crate::Error::Initialization(format!("Failed to create window surface: {}", e))
-                })?
-        };
-
-        let context_attributes =
-            glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
-
-        let context = unsafe {
-            display
-                .create_context(&config, &context_attributes)
-                .expect("Failed to create context")
-        };
-
-        let current_context = context
-            .make_current(&surface)
-            .expect("Failed to make context current");
-
-        let render_context = Arc::new(Mutex::new(
-            libmpv::RenderContext::new(
-                &mpv_client,
-                vec![
-                    RenderParam::ApiTypeOpenGL,
-                    RenderParam::InitParams(OpenGLInitParams {
-                        get_proc_address,
-                        user_context: display.clone(),
-                    }),
-                ],
-            )
-            .map_err(|e| crate::Error::Initialization(e.to_string()))?,
-        ));
-
-        render_contexts_lock.insert(window_label.to_string(), render_context.clone());
-
-        drop(render_contexts_lock);
-
-        let render_context_for_callback = render_context.clone();
-
-        let mut render_context_lock = match render_context_for_callback.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                warn!("Render context mutex was poisoned. Recovering.");
-                poisoned.into_inner()
-            }
-        };
-
-        render_context_lock.set_update_callback(move || {
-            redraw_tx.send(MpvThreadEvent::Redraw).ok();
-        });
-
-        mpv_client.set_wakeup_callback(move || {
-            event_tx.send(MpvThreadEvent::MpvEvents).ok();
-        });
-
-        window.on_window_event(move |event| {
-            if let tauri::WindowEvent::Resized(_) = event {
-                resize_tx.send(MpvThreadEvent::Redraw).ok();
-            }
-        });
-
-        Ok(Some((
-            event_rx,
-            window,
-            render_context,
-            surface,
-            current_context,
-            display,
-        )))
-    })();
-
-    let (event_rx, window, render_context, surface, current_context, display) = match setup_result {
+    let MpvRenderResources {
+        window,
+        app,
+        window_label,
+        render_context,
+        surface,
+        current_context,
+        display,
+        event_rx,
+        redraw_tx_for_stop,
+        mpv_client,
+    } = match setup_result {
         Ok(Some(data)) => data,
         Ok(None) => {
             let _ = init_tx.send(Ok(()));
@@ -690,7 +553,7 @@ fn setup_and_run_render_loop<R: Runtime>(
                             drop(surface);
                             drop(display);
 
-                            app.mpv().remove_render_context(window_label)?;
+                            app.mpv().remove_render_context(&window_label)?;
 
                             return Ok(());
                         }
@@ -698,7 +561,7 @@ fn setup_and_run_render_loop<R: Runtime>(
                         Err(e) => {
                             error!("mpv event error: {}", e);
 
-                            app.mpv().remove_render_context(window_label)?;
+                            app.mpv().remove_render_context(&window_label)?;
 
                             return Err(crate::Error::Render(e.to_string()));
                         }
@@ -709,4 +572,151 @@ fn setup_and_run_render_loop<R: Runtime>(
     }
 
     Ok(())
+}
+
+fn setup_mpv_rendering<R: Runtime>(
+    app: AppHandle<R>,
+    mut mpv_client: libmpv::Mpv,
+    window_label: &str,
+) -> Result<Option<MpvRenderResources<R>>> {
+    let mut render_contexts_lock = match app.mpv().render_contexts.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            warn!("Mutex for render contexts was poisoned. Recovering.");
+            poisoned.into_inner()
+        }
+    };
+    if render_contexts_lock.contains_key(window_label) {
+        info!(
+            "display for window '{}' already exists. Skipping initialization.",
+            window_label
+        );
+        return Ok(None);
+    }
+
+    let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
+
+    let redraw_tx = event_tx.clone();
+    let redraw_tx_for_stop = event_tx.clone();
+    let resize_tx = event_tx.clone();
+
+    let window = app
+        .get_webview_window(window_label)
+        .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+    let window_handle = window.window_handle()?;
+    let raw_window_handle = window_handle.as_raw();
+    let display_handle = window.display_handle()?;
+    let raw_display_handle = display_handle.as_raw();
+
+    let surface_attributes = window.build_surface_attributes(Default::default())?;
+
+    let template = glutin::config::ConfigTemplateBuilder::new()
+        .compatible_with_native_window(raw_window_handle);
+
+    let display = Arc::new(unsafe {
+        #[cfg(windows)]
+        let preference = { DisplayApiPreference::WglThenEgl(Some(raw_window_handle)) };
+
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let preference = {
+            match raw_window_handle {
+                raw_window_handle::RawWindowHandle::Wayland(_) => DisplayApiPreference::Egl,
+                raw_window_handle::RawWindowHandle::Xlib(_)
+                | raw_window_handle::RawWindowHandle::Xcb(_) => DisplayApiPreference::GlxThenEgl(
+                    Box::new(winit::platform::x11::register_xlib_error_hook),
+                ),
+                _ => DisplayApiPreference::Egl,
+            }
+        };
+
+        #[cfg(target_os = "macos")]
+        let preference = DisplayApiPreference::Cgl;
+
+        match Display::new(raw_display_handle, preference) {
+            Ok(display) => display,
+            Err(e) => {
+                let error_message = format!("Failed to create glutin display: {}", e);
+                error!("{}", error_message);
+                return Err(crate::Error::UnsupportedPlatform(error_message).into());
+            }
+        }
+    });
+
+    let config = unsafe {
+        display
+            .find_configs(template.build())
+            .map_err(|e| crate::Error::Initialization(format!("Failed to find GL configs: {}", e)))?
+            .next()
+            .ok_or_else(|| {
+                crate::Error::Initialization("No suitable GL config found".to_string())
+            })?
+    };
+
+    let surface = unsafe {
+        display
+            .create_window_surface(&config, &surface_attributes)
+            .map_err(|e| {
+                crate::Error::Initialization(format!("Failed to create window surface: {}", e))
+            })?
+    };
+
+    let context_attributes =
+        glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
+
+    let context = unsafe {
+        display
+            .create_context(&config, &context_attributes)
+            .expect("Failed to create context")
+    };
+
+    let current_context = context
+        .make_current(&surface)
+        .expect("Failed to make context current");
+
+    let render_context = Arc::new(Mutex::new(
+        libmpv::RenderContext::new(
+            &mpv_client,
+            vec![
+                RenderParam::ApiTypeOpenGL,
+                RenderParam::InitParams(OpenGLInitParams {
+                    get_proc_address,
+                    user_context: display.clone(),
+                }),
+            ],
+        )
+        .map_err(|e| crate::Error::Initialization(e.to_string()))?,
+    ));
+
+    let render_context_for_callback = render_context.clone();
+
+    render_contexts_lock.insert(window_label.to_string(), render_context.clone());
+    drop(render_contexts_lock);
+
+    let mut render_context_lock = render_context.lock().unwrap();
+    render_context_lock.set_update_callback(move || {
+        redraw_tx.send(MpvThreadEvent::Redraw).ok();
+    });
+
+    mpv_client.set_wakeup_callback(move || {
+        event_tx.send(MpvThreadEvent::MpvEvents).ok();
+    });
+
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Resized(_) = event {
+            resize_tx.send(MpvThreadEvent::Redraw).ok();
+        }
+    });
+
+    Ok(Some(MpvRenderResources {
+        window,
+        app,
+        window_label: window_label.to_string(),
+        render_context: render_context_for_callback,
+        surface,
+        current_context,
+        display,
+        event_rx,
+        redraw_tx_for_stop,
+        mpv_client,
+    }))
 }

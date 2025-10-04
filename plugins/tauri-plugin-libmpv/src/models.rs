@@ -1,12 +1,10 @@
-use glutin::surface::WindowSurface;
-use raw_window_handle::HasWindowHandle;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     num::NonZeroU32,
-    sync::{Arc, Mutex},
+    sync::{mpsc, Arc, Mutex},
 };
-use tauri::{Runtime, WebviewWindow};
+use tauri::{AppHandle, Runtime, WebviewWindow};
 
 use crate::libmpv::{self, RenderContext};
 
@@ -61,9 +59,9 @@ pub struct VideoMarginRatio {
 pub trait GlWindow {
     fn build_surface_attributes(
         &self,
-        builder: glutin::surface::SurfaceAttributesBuilder<WindowSurface>,
+        builder: glutin::surface::SurfaceAttributesBuilder<glutin::surface::WindowSurface>,
     ) -> std::result::Result<
-        glutin::surface::SurfaceAttributes<WindowSurface>,
+        glutin::surface::SurfaceAttributes<glutin::surface::WindowSurface>,
         raw_window_handle::HandleError,
     >;
 }
@@ -71,11 +69,12 @@ pub trait GlWindow {
 impl<R: Runtime> GlWindow for WebviewWindow<R> {
     fn build_surface_attributes(
         &self,
-        builder: glutin::surface::SurfaceAttributesBuilder<WindowSurface>,
+        builder: glutin::surface::SurfaceAttributesBuilder<glutin::surface::WindowSurface>,
     ) -> std::result::Result<
-        glutin::surface::SurfaceAttributes<WindowSurface>,
+        glutin::surface::SurfaceAttributes<glutin::surface::WindowSurface>,
         raw_window_handle::HandleError,
     > {
+        use raw_window_handle::HasWindowHandle;
         let (w, h) = self
             .inner_size()
             .map_err(|_| raw_window_handle::HandleError::Unavailable)?
@@ -96,4 +95,17 @@ impl NonZeroU32PhysicalSize for winit::dpi::PhysicalSize<u32> {
         let h = NonZeroU32::new(self.height)?;
         Some((w, h))
     }
+}
+
+pub struct MpvRenderResources<R: Runtime> {
+    pub window: WebviewWindow<R>,
+    pub app: AppHandle<R>,
+    pub window_label: String,
+    pub render_context: Arc<Mutex<RenderContext<Arc<glutin::display::Display>>>>,
+    pub surface: glutin::surface::Surface<glutin::surface::WindowSurface>,
+    pub current_context: glutin::context::PossiblyCurrentContext,
+    pub display: Arc<glutin::display::Display>,
+    pub event_rx: mpsc::Receiver<MpvThreadEvent>,
+    pub redraw_tx_for_stop: mpsc::Sender<MpvThreadEvent>,
+    pub mpv_client: libmpv::Mpv,
 }
