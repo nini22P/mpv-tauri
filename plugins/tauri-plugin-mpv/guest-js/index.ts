@@ -212,8 +212,8 @@ export async function observeProperties(
 ): Promise<UnlistenFn>;
 
 export async function observeProperties(
-  arg1: ReadonlyArray<string> | ((event: unknown) => void),
-  arg2?: ((event: unknown) => void) | string,
+  arg1: ReadonlyArray<string> | ((event: never) => void),
+  arg2?: ((event: never) => void) | string,
   arg3?: string
 ): Promise<UnlistenFn> {
   let properties: ReadonlyArray<string>
@@ -222,7 +222,7 @@ export async function observeProperties(
 
   if (typeof arg1 === 'function') {
     properties = COMMON_PROPERTIES
-    callback = arg1
+    callback = arg1 as (event: unknown) => void
     windowLabel = arg2 as string | undefined
   } else {
     properties = arg1

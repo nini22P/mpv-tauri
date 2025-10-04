@@ -31,7 +31,7 @@ function App() {
               updatePlayerState('integrationMode', integrationMode === 'wid' ? 'render' : 'wid')
               updatePlayerState('timePos', 0)
               updatePlayerState('duration', 0)
-              updatePlayerState('filename', undefined)
+              updatePlayerState('filename', null)
             }
           }
         >

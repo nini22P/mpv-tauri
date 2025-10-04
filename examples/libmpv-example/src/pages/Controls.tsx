@@ -72,7 +72,7 @@ const Controls = () => {
               stop()
               updatePlayerState('timePos', 0)
               updatePlayerState('duration', 0)
-              updatePlayerState('filename', undefined)
+              updatePlayerState('filename', null)
             }
           }
         >⏹</button>

@@ -1,55 +1,3 @@
-# Tauri Plugin mpv
-
-A Tauri plugin for embedding the mpv player in your app by controlling its process via JSON IPC.
-
-## Installation
-
-### Prerequisites
-
-- [mpv](https://mpv.io/) must be installed and available in your system PATH
-- Tauri v2.x
-- Node.js 18+
-
-### Install the Plugin
-
-```bash
-npm run tauri add mpv
-```
-
-### Configure Window Transparency
-
-For mpv to properly embed into your Tauri window, you need to configure transparency:
-
-#### Set window transparency in `tauri.conf.json`
-
-```json
-{
-  "app": {
-    "windows": [
-      {
-        "title": "Your App",
-        "width": 1280,
-        "height": 720,
-        "transparent": true  // Add this line
-      }
-    ]
-  }
-}
-```
-
-#### Set web page background to transparent in your CSS
-
-```css
-/* In your main CSS file */
-html,
-body {
-  background: transparent;
-}
-```
-
-## Quick Start
-
-```typescript
 import {
   MpvConfig,
   init,
@@ -121,18 +69,3 @@ console.log('Current volume:', volume)
 
 // Destroy mpv when your app closes or the player is no longer needed
 await destroy()
-```
-
-## Platform Support
-
-- ✅ **Windows** - Fully tested and supported
-- ⚠️ **Linux** - Not tested
-- ⚠️ **macOS** - Not tested
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
