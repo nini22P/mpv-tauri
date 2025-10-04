@@ -16,6 +16,7 @@ mod events;
 mod ipc;
 mod models;
 mod process;
+mod utils;
 
 pub use error::{Error, Result};
 
