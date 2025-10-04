@@ -1,11 +1,11 @@
+use log::info;
+use raw_window_handle::HasWindowHandle;
+use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::Mutex;
-
-use log::info;
-use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use serde::de::DeserializeOwned;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
+use crate::utils::get_wid;
 use crate::{ipc, models::*, process, MpvExt};
 use crate::{MpvInstance, Result};
 
@@ -35,7 +35,8 @@ impl<R: Runtime> Mpv<R> {
             .get_webview_window(window_label)
             .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
         let window_handle = window.window_handle()?;
-        let wid = get_wid_from_handle(window_handle.as_raw())?;
+        let raw_window_handle = window_handle.as_raw();
+        let wid = get_wid(raw_window_handle)?;
 
         process::init_mpv_process(&app, wid, mpv_config, window_label)?;
 
@@ -86,14 +87,5 @@ impl<R: Runtime> Mpv<R> {
         }
 
         Ok(())
-    }
-}
-
-fn get_wid_from_handle(raw_handle: RawWindowHandle) -> Result<i64> {
-    match raw_handle {
-        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get() as i64),
-        RawWindowHandle::Xlib(handle) => Ok(handle.window as i64),
-        RawWindowHandle::AppKit(handle) => Ok(handle.ns_view.as_ptr() as i64),
-        _ => Err(crate::Error::UnsupportedPlatform),
     }
 }

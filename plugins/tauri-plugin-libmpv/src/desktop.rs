@@ -1,16 +1,16 @@
 use glutin::context::NotCurrentGlContext;
-use glutin::display::{DisplayApiPreference, GlDisplay};
+use glutin::display::{Display, DisplayApiPreference, GlDisplay};
 use glutin::surface::GlSurface;
 use log::{error, info, trace, warn};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
-use std::ffi::{c_void, CString};
 use std::sync::{mpsc, Arc, Mutex};
 use tauri::Emitter;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
 use crate::libmpv::{MpvFormat, OpenGLInitParams, PropertyValue, RenderParam};
+use crate::utils::{get_proc_address, get_wid};
 use crate::{libmpv, models::*};
 use crate::{MpvExt, Result};
 
@@ -53,7 +53,8 @@ impl<R: Runtime> Mpv<R> {
             .get_webview_window(window_label)
             .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
         let window_handle = window.window_handle()?;
-        let wid = get_wid_from_handle(window_handle.as_raw())?;
+        let raw_window_handle = window_handle.as_raw();
+        let wid = get_wid(raw_window_handle)?;
 
         let mut initial_options = mpv_config.initial_options.clone();
         initial_options.insert("wid".to_string(), serde_json::json!(wid));
@@ -349,22 +350,6 @@ impl<R: Runtime> Mpv<R> {
     }
 }
 
-fn get_wid_from_handle(raw_handle: RawWindowHandle) -> Result<i64> {
-    match raw_handle {
-        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get() as i64),
-        RawWindowHandle::Xlib(handle) => Ok(handle.window as i64),
-        RawWindowHandle::AppKit(handle) => Ok(handle.ns_view.as_ptr() as i64),
-        _ => Err(crate::Error::UnsupportedPlatform),
-    }
-}
-
-fn get_proc_address(display: &Arc<glutin::display::Display>, name: &str) -> *mut c_void {
-    match CString::new(name) {
-        Ok(c_str) => display.get_proc_address(&c_str) as *mut _,
-        Err(_) => std::ptr::null_mut(),
-    }
-}
-
 fn create_mpv_instance(
     initial_options: HashMap<String, serde_json::Value>,
     window_label: &str,
@@ -507,6 +492,7 @@ fn setup_and_run_render_loop<R: Runtime>(
         let window_handle = window.window_handle()?;
         let raw_window_handle = window_handle.as_raw();
         let display_handle = window.display_handle()?;
+        let raw_display_handle = display_handle.as_raw();
 
         let surface_attributes = window.build_surface_attributes(Default::default())?;
 
@@ -514,12 +500,31 @@ fn setup_and_run_render_loop<R: Runtime>(
             .compatible_with_native_window(raw_window_handle);
 
         let display = Arc::new(unsafe {
-            let preference = DisplayApiPreference::WglThenEgl(Some(window_handle.as_raw()));
-            match glutin::display::Display::new(display_handle.as_raw(), preference) {
+            #[cfg(windows)]
+            let preference = { DisplayApiPreference::WglThenEgl(Some(raw_window_handle)) };
+
+            #[cfg(all(unix, not(target_os = "macos")))]
+            let preference = {
+                match raw_window_handle {
+                    RawWindowHandle::Wayland(_) => DisplayApiPreference::Egl,
+                    RawWindowHandle::Xlib(_) | RawWindowHandle::Xcb(_) => {
+                        DisplayApiPreference::GlxThenEgl(Box::new(
+                            winit::platform::x11::register_xlib_error_hook,
+                        ))
+                    }
+                    _ => DisplayApiPreference::Egl,
+                }
+            };
+
+            #[cfg(target_os = "macos")]
+            let preference = DisplayApiPreference::Cgl;
+
+            match Display::new(raw_display_handle, preference) {
                 Ok(display) => display,
                 Err(e) => {
-                    error!("Failed to create glutin display: {}", e);
-                    return Err(crate::Error::UnsupportedPlatform);
+                    let error_message = format!("Failed to create glutin display: {}", e);
+                    error!("{}", error_message);
+                    return Err(crate::Error::UnsupportedPlatform(error_message).into());
                 }
             }
         });

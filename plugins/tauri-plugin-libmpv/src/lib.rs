@@ -14,6 +14,7 @@ mod commands;
 mod error;
 mod libmpv;
 mod models;
+mod utils;
 
 pub use error::{Error, Result};
 

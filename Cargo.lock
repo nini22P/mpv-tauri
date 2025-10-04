@@ -5121,6 +5121,10 @@ name = "tauri-plugin-libmpv-sys"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3ce7918222a39a894fdfcd8cb0cd6cd700034f1242d7eeecfc16d546b308871"
+dependencies = [
+ "bindgen",
+ "reqwest",
+]
 
 [[package]]
 name = "tauri-plugin-log"
