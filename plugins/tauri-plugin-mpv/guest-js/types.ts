@@ -126,9 +126,19 @@ export interface MpvEndFileEvent extends MpvEventBase<'end-file'> {
   playlist_entry_id: number;
 }
 
+export type MpvPropertyEventFor<K extends string> = {
+  [P in K]: P extends keyof MpvPropertyTypes
+  ? { name: P; data: MpvPropertyTypes[P]; id: number }
+  : { name: P; data?: unknown; id: number };
+}[K];
+
+export type MpvPropertyValue<K extends string> = K extends keyof MpvPropertyTypes
+  ? MpvPropertyTypes[K]
+  : unknown;
+
 export interface PropertyChangeEvent extends MpvEventBase<'property-change'> {
   name: string;
-  data: unknown;
+  data?: unknown;
   id: number;
 }
 
@@ -141,16 +151,6 @@ export type MpvEvent =
   | MpvEndFileEvent
   | PropertyChangeEvent
   | OtherMpvEvent;
-
-export type MpvPropertyEventFor<K extends string> = {
-  [P in K]: P extends keyof MpvPropertyTypes
-  ? { name: P; data: MpvPropertyTypes[P] }
-  : { name: P; data: unknown };
-}[K];
-
-export type MpvPropertyValue<K extends string> = K extends keyof MpvPropertyTypes
-  ? MpvPropertyTypes[K]
-  : unknown;
 
 export interface VideoMarginRatio {
   left?: number;
