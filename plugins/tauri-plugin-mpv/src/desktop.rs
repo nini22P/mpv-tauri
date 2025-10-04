@@ -1,11 +1,9 @@
 use log::info;
-use raw_window_handle::HasWindowHandle;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
+use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
-use crate::utils::get_wid;
 use crate::{ipc, models::*, process, MpvExt};
 use crate::{MpvInstance, Result};
 
@@ -30,15 +28,7 @@ impl<R: Runtime> Mpv<R> {
     pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app = self.app.clone();
 
-        let window = self
-            .app
-            .get_webview_window(window_label)
-            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
-        let window_handle = window.window_handle()?;
-        let raw_window_handle = window_handle.as_raw();
-        let wid = get_wid(raw_window_handle)?;
-
-        process::init_mpv_process(&app, wid, mpv_config, window_label)?;
+        process::init_mpv_process(&app, mpv_config, window_label)?;
 
         Ok(window_label.to_string())
     }

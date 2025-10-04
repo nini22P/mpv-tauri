@@ -5,6 +5,7 @@
 - Set the `LC_NUMERIC` locale on setup.
 - Re-license to MPL-2.0.
 - Enhance type inference for `observeProperties` and `getProperty`
+- Allow overriding `wid` option.
 
 ## v0.0.1
 

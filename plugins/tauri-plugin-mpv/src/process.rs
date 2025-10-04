@@ -1,4 +1,5 @@
 use log::{debug, error, info, trace, warn};
+use raw_window_handle::HasWindowHandle;
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -6,15 +7,15 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::events::{self};
 use crate::ipc::get_ipc_pipe;
+use crate::utils::get_wid;
 use crate::{MpvConfig, MpvExt, MpvInstance};
 
 pub fn init_mpv_process<R: Runtime>(
     app: &AppHandle<R>,
-    wid: i64,
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
@@ -46,13 +47,31 @@ pub fn init_mpv_process<R: Runtime>(
 
     info!("Initializing mpv for window '{}'...", window_label);
 
-    debug!("Using IPC pipe: {}", ipc_pipe);
-    debug!(
-        "Starting mpv process for window '{}' (WID: {})",
-        window_label, wid
-    );
+    let wid: i64 = if let Some(user_wid_str) = mpv_config
+        .args
+        .iter()
+        .find_map(|arg| arg.strip_prefix("--wid="))
+    {
+        match user_wid_str.parse() {
+            Ok(parsed_wid) => parsed_wid,
+            Err(_) => {
+                warn!(
+                    "Failed to parse provided wid '{}'. Falling back to window handle.",
+                    user_wid_str
+                );
+                let window = app
+                    .get_webview_window(window_label)
+                    .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+                get_wid(window.window_handle()?.as_raw())?
+            }
+        }
+    } else {
+        let window = app
+            .get_webview_window(window_label)
+            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+        get_wid(window.window_handle()?.as_raw())?
+    };
 
-    // Default mpv arguments
     // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
         format!("--wid={}", wid),
@@ -60,7 +79,19 @@ pub fn init_mpv_process<R: Runtime>(
         "--profile=libmpv".to_string(),
     ];
 
-    args.extend(mpv_config.args);
+    args.extend(
+        mpv_config
+            .args
+            .iter()
+            .filter(|arg| !arg.starts_with("--wid="))
+            .cloned(),
+    );
+
+    debug!("Using IPC pipe: {}", ipc_pipe);
+    debug!(
+        "Starting mpv process for window '{}' (WID: {})",
+        window_label, wid
+    );
 
     let mpv_path = mpv_config.path;
 
