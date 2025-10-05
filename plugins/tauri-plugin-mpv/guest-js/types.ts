@@ -1,8 +1,13 @@
 export interface MpvConfig {
+  /** Path to the mpv executable. If not provided, it will be searched in the system's PATH. */
   path?: string;
+  /** An array of command-line arguments to pass to the mpv instance. */
   args?: string[];
+  /** A list of mpv properties to observe automatically upon initialization. */
   observedProperties?: readonly string[];
+  /** Timeout in milliseconds for IPC commands. */
   ipcTimeoutMs?: number;
+  /** Whether to show mpv's console output in the terminal. */
   showMpvOutput?: boolean;
 }
 

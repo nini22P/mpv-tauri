@@ -25,6 +25,7 @@ export * from './types'
  * @example
  * ```typescript
  * import { init, MpvConfig, MpvObservableProperty } from 'tauri-plugin-libmpv-api';
+ * 
  * // Note the optional 'none' marker for properties that can be null (e.g., when no file is loaded)
  * const OBSERVED_PROPERTIES = [
  *   ['pause', 'flag'],
@@ -92,9 +93,9 @@ export async function destroy(windowLabel?: string): Promise<void> {
 /**
  * Listen to mpv property change events.
  * 
- * @param {ReadonlyArray<MpvProperty>} properties - An array of tuples, where each tuple is [propertyName, format].
- * Each tuple is [propertyName, format]. An optional third element, 'none', can be included 
- * (e.g., ['duration', 'double', 'none']) to signal to TypeScript that the property's value may be null, 
+ * @param {ReadonlyArray<MpvObservableProperty>} properties - An array of tuples, where each tuple defines a property to observe.
+ * Each tuple is `[propertyName, format]`. An optional third element, `'none'`, can be included 
+ * (e.g., `['duration', 'double', 'none']`) to signal to TypeScript that the property's value may be null.
  * @param {(event: MpvEventFromProperties<T[number]>) => void} callback - Function to call when a matching property-change event is received.
  * @param {string} [windowLabel] - Target window label, defaults to current window.
  * @returns {Promise<UnlistenFn>} A function to call to stop listening.
@@ -198,6 +199,8 @@ export async function listenEvents(
  * @param {string} [windowLabel] - Target window label, defaults to current window.
  * @throws {Error} Throws an error if the command fails.
  * 
+ * @see {@link https://mpv.io/manual/master/#list-of-input-commands} for a full list of commands.
+ * 
  * @example
  * ```typescript
  * import { command } from 'tauri-plugin-libmpv-api';
@@ -276,11 +279,11 @@ export async function setProperty(
 }
 
 /**
- * Get mpv property
- * 
- * @param {string} name - Property name
+ * Get mpv property.
+ * @param {string} name - Property name.
+ * @param {MpvFormat} format - The desired data format for the property value.
  * @param {string} [windowLabel] - Target window label, defaults to current window.
- * @returns {Promise<unknown>} Promise with property value
+ * @returns {Promise<unknown>} A promise that resolves with the property value.
  * @throws {Error} Throws an error if the command fails.
  * 
  * @see {@link https://mpv.io/manual/master/#properties} for a full list of properties.
@@ -290,16 +293,14 @@ export async function setProperty(
  * import { getProperty } from 'tauri-plugin-libmpv-api';
  * 
  * // Get volume
- * const volume = await getProperty('volume', 'int');
- * console.log('Volume:', volume);
+ * const volume = await getProperty('volume', 'int64');
+ * console.log('Volume:', volume); // Type: number
  * 
  * // Get playlist
  * const playlist = await getProperty('playlist', 'node');
- * console.log('Playlist:', playlist);
- * 
+ * console.log('Playlist:', playlist); // Type: unknown
  * ```
  */
-
 export async function getProperty<T extends MpvFormat>(
   name: string,
   format: T,

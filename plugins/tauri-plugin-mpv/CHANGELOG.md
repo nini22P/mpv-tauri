@@ -1,11 +1,11 @@
 ## v0.5.0
 
-- The `observeMpvProperties` function has been deprecated. Use `observeProperties` instead.
-- The `listenMpvEvents` function has been deprecated. Use `listenEvents` instead.
+- **BREAKING:** The `observeMpvProperties` function has been deprecated. Use `observeProperties` instead.
+- **BREAKING:** The `listenMpvEvents` function has been deprecated. Use `listenEvents` instead.
 - Add types for `start-file` and `end-file` events.
-- Set LC_NUMERIC on setup.
-- Re-license to MPL-2.0.
+- Set `LC_NUMERIC` on setup.
 - Allow overriding `wid` option.
+- Re-license to MPL-2.0.
 
 ## v0.4.0
 
@@ -33,7 +33,7 @@ const mpvConfig: MpvConfig = {
 ## v0.3.2
 
 - The `command` function now automatically generates a `request_id` if one is not provided.
-- The core API functions have been renamed for brevity. Please update your code to use the new, shorter function names.
+- **BREAKING:** The core API functions have been renamed for brevity. Please update your code to use the new, shorter function names.
 
   - `initializeMpv` -> `init`
   - `sendMpvCommand` -> `command`
