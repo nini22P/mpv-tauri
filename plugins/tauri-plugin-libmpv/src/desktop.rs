@@ -9,7 +9,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use tauri::Emitter;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::libmpv::{MpvFormat, OpenGLInitParams, PropertyValue, RenderParam};
+use crate::libmpv::{MpvFormat, PropertyValue, RenderParams};
 use crate::utils::{get_proc_address, get_wid};
 use crate::{libmpv, models::*};
 use crate::{MpvExt, Result};
@@ -528,7 +528,9 @@ fn setup_and_run_render_loop<R: Runtime>(
                 };
 
                 if let Ok(size) = window.inner_size() {
-                    if let Err(e) = render_context_lock.render(size.width as _, size.height as _) {
+                    if let Err(e) =
+                        render_context_lock.render(Some(0), size.width as _, size.height as _)
+                    {
                         error!("Failed to render frame: {}", e);
                     }
                 }
@@ -641,7 +643,7 @@ fn setup_mpv_rendering<R: Runtime>(
             Err(e) => {
                 let error_message = format!("Failed to create glutin display: {}", e);
                 error!("{}", error_message);
-                return Err(crate::Error::UnsupportedPlatform(error_message).into());
+                return Err(crate::Error::UnsupportedPlatform(error_message));
             }
         }
     });
@@ -680,13 +682,10 @@ fn setup_mpv_rendering<R: Runtime>(
     let render_context = Arc::new(Mutex::new(
         libmpv::RenderContext::new(
             &mpv_client,
-            vec![
-                RenderParam::ApiTypeOpenGL,
-                RenderParam::InitParams(OpenGLInitParams {
-                    get_proc_address,
-                    user_context: display.clone(),
-                }),
-            ],
+            RenderParams {
+                get_proc_address,
+                context: display.clone(),
+            },
         )
         .map_err(|e| crate::Error::Initialization(e.to_string()))?,
     ));

@@ -6,34 +6,29 @@ use tauri_plugin_libmpv_sys as libmpv_sys;
 use crate::libmpv::utils::error_string;
 use crate::libmpv::{self, Error, Result};
 
-pub struct OpenGLInitParams<T: Send + 'static> {
-    pub get_proc_address: fn(ctx: &T, name: &str) -> *mut c_void,
-    pub user_context: T,
-}
-
-pub enum RenderParam<T: Send + 'static> {
-    ApiTypeOpenGL,
-    InitParams(OpenGLInitParams<T>),
+pub struct RenderParams<T: Send + 'static> {
+    pub get_proc_address: fn(&T, addr: &str) -> *mut c_void,
+    pub context: T,
 }
 
 struct TrampolinePayload<T: Send + 'static> {
-    user_fn: fn(ctx: &T, name: &str) -> *mut c_void,
-    user_ctx: T,
+    get_proc_address: fn(&T, addr: &str) -> *mut c_void,
+    context: T,
 }
 
 unsafe extern "C" fn get_proc_address_trampoline<T: Send + 'static>(
     ctx: *mut c_void,
-    name: *const c_char,
+    addr: *const c_char,
 ) -> *mut c_void {
-    if ctx.is_null() || name.is_null() {
+    if ctx.is_null() || addr.is_null() {
         return ptr::null_mut();
     }
     let payload = &*(ctx as *const TrampolinePayload<T>);
-    let symbol = match CStr::from_ptr(name).to_str() {
+    let symbol = match CStr::from_ptr(addr).to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
-    (payload.user_fn)(&payload.user_ctx, symbol)
+    (payload.get_proc_address)(&payload.context, symbol)
 }
 
 struct UpdateCallbackData {
@@ -51,9 +46,8 @@ extern "C" fn update_callback_c(data: *mut c_void) {
 pub struct RenderContext<T: Send + 'static> {
     pub ctx: *mut libmpv_sys::mpv_render_context,
     update_callback_data: *mut UpdateCallbackData,
-    _trampoline_payload_owner: Option<Box<TrampolinePayload<T>>>,
-
-    _opengl_init_params_owner: Option<Box<libmpv_sys::mpv_opengl_init_params>>,
+    _trampoline_payload_owner: Box<TrampolinePayload<T>>,
+    _opengl_init_params_owner: Box<libmpv_sys::mpv_opengl_init_params>,
     _phantom: PhantomData<T>,
 }
 
@@ -61,47 +55,35 @@ unsafe impl<T: Send + 'static> Send for RenderContext<T> {}
 unsafe impl<T: Send + 'static> Sync for RenderContext<T> {}
 
 impl<T: Send + 'static> RenderContext<T> {
-    pub fn new(mpv: &libmpv::Mpv, params: Vec<RenderParam<T>>) -> Result<Self> {
-        let mut trampoline_payload_owner: Option<Box<TrampolinePayload<T>>> = None;
-
-        let mut opengl_init_params_owner: Option<Box<libmpv_sys::mpv_opengl_init_params>> = None;
+    pub fn new(mpv: &libmpv::Mpv, params: RenderParams<T>) -> Result<Self> {
         let mut mpv_params: Vec<libmpv_sys::mpv_render_param> = Vec::new();
 
-        for param in params {
-            match param {
-                RenderParam::ApiTypeOpenGL => {
-                    mpv_params.push(libmpv_sys::mpv_render_param {
-                        type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_API_TYPE,
-                        data: libmpv_sys::MPV_RENDER_API_TYPE_OPENGL.as_ptr() as *mut _,
-                    });
-                }
-                RenderParam::InitParams(gl_params) => {
-                    let payload = Box::new(TrampolinePayload {
-                        user_fn: gl_params.get_proc_address,
-                        user_ctx: gl_params.user_context,
-                    });
-                    let payload_ptr = &*payload as *const _ as *mut c_void;
+        mpv_params.push(libmpv_sys::mpv_render_param {
+            type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_API_TYPE,
+            data: libmpv_sys::MPV_RENDER_API_TYPE_OPENGL.as_ptr() as *mut _,
+        });
 
-                    let opengl_init_params = Box::new(libmpv_sys::mpv_opengl_init_params {
-                        get_proc_address: Some(get_proc_address_trampoline::<T>),
-                        get_proc_address_ctx: payload_ptr,
-                    });
+        let payload = Box::new(TrampolinePayload {
+            get_proc_address: params.get_proc_address,
+            context: params.context,
+        });
+        let payload_ptr = &*payload as *const _ as *mut c_void;
 
-                    let params_ptr = &*opengl_init_params as *const _ as *mut c_void;
+        let opengl_init_params = Box::new(libmpv_sys::mpv_opengl_init_params {
+            get_proc_address: Some(get_proc_address_trampoline::<T>),
+            get_proc_address_ctx: payload_ptr,
+        });
 
-                    mpv_params.push(libmpv_sys::mpv_render_param {
-                        type_:
-                            libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
+        let params_ptr = &*opengl_init_params as *const _ as *mut c_void;
 
-                        data: params_ptr,
-                    });
+        mpv_params.push(libmpv_sys::mpv_render_param {
+            type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
 
-                    opengl_init_params_owner = Some(opengl_init_params);
+            data: params_ptr,
+        });
 
-                    trampoline_payload_owner = Some(payload);
-                }
-            }
-        }
+        let trampoline_payload_owner: Box<TrampolinePayload<T>> = payload;
+        let opengl_init_params_owner: Box<libmpv_sys::mpv_opengl_init_params> = opengl_init_params;
 
         mpv_params.push(libmpv_sys::mpv_render_param {
             type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_INVALID,
@@ -146,9 +128,9 @@ impl<T: Send + 'static> RenderContext<T> {
         }
     }
 
-    pub fn render(&self, width: i32, height: i32) -> Result<()> {
+    pub fn render(&self, fbo_id: Option<u32>, width: i32, height: i32) -> Result<()> {
         let fbo = libmpv_sys::mpv_opengl_fbo {
-            fbo: 0,
+            fbo: fbo_id.unwrap_or(0) as i32,
             w: width,
             h: height,
             internal_format: 0,

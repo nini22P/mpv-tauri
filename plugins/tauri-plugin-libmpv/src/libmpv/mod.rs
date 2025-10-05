@@ -14,7 +14,7 @@ pub use builder::MpvBuilder;
 pub use error::{Error, Result};
 pub use event::Event;
 pub use models::*;
-pub use render::{OpenGLInitParams, RenderContext, RenderParam};
+pub use render::{RenderContext, RenderParams};
 
 pub struct Mpv {
     pub handle: *mut libmpv_sys::mpv_handle,

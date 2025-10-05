@@ -47,24 +47,24 @@ pub fn init_mpv_process<R: Runtime>(
 
     info!("Initializing mpv for window '{}'...", window_label);
 
-    let wid: i64 = if let Some(user_wid_str) = mpv_config
+    let wid_arg = mpv_config
         .args
         .iter()
-        .find_map(|arg| arg.strip_prefix("--wid="))
-    {
-        match user_wid_str.parse() {
-            Ok(parsed_wid) => parsed_wid,
-            Err(_) => {
-                warn!(
-                    "Failed to parse provided wid '{}'. Falling back to window handle.",
-                    user_wid_str
-                );
-                let window = app
-                    .get_webview_window(window_label)
-                    .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
-                get_wid(window.window_handle()?.as_raw())?
-            }
+        .find_map(|arg| arg.strip_prefix("--wid="));
+
+    let parsed_wid: Option<i64> = wid_arg.and_then(|wid_str| match wid_str.parse() {
+        Ok(wid) => Some(wid),
+        Err(_) => {
+            warn!(
+                "Failed to parse provided wid '{}'. Falling back to window handle.",
+                wid_str
+            );
+            None
         }
+    });
+
+    let wid: i64 = if let Some(parsed_wid) = parsed_wid {
+        parsed_wid
     } else {
         let window = app
             .get_webview_window(window_label)
@@ -74,18 +74,15 @@ pub fn init_mpv_process<R: Runtime>(
 
     // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
-        format!("--wid={}", wid),
         format!("--input-ipc-server={}", ipc_pipe),
         "--profile=libmpv".to_string(),
     ];
 
-    args.extend(
-        mpv_config
-            .args
-            .iter()
-            .filter(|arg| !arg.starts_with("--wid="))
-            .cloned(),
-    );
+    if parsed_wid.is_none() {
+        args.push(format!("--wid={}", wid));
+    }
+
+    args.extend(mpv_config.args.iter().cloned());
 
     debug!("Using IPC pipe: {}", ipc_pipe);
     debug!(

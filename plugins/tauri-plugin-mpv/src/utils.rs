@@ -10,12 +10,12 @@ pub fn get_wid(raw_window_handle: raw_window_handle::RawWindowHandle) -> crate::
             let error_message =
                 "Window embedding via --wid is not supported on Wayland.".to_string();
             error!("{}", error_message);
-            Err(crate::Error::UnsupportedPlatform(error_message).into())
+            Err(crate::Error::UnsupportedPlatform(error_message))
         }
         _ => {
             let error_message = "Unsupported platform.".to_string();
             error!("{}", error_message);
-            Err(crate::Error::UnsupportedPlatform("".to_string()).into())
+            Err(crate::Error::UnsupportedPlatform("".to_string()))
         }
     }
 }
