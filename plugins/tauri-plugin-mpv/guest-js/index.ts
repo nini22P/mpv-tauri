@@ -96,11 +96,6 @@ export async function init(
 
 
 /**
- * @deprecated Use `init()` instead. This function will be removed in a future version.
- */
-export const initializeMpv = init
-
-/**
  * Destroy mpv player.
  * 
  * @param {string} [windowLabel] - Target window label, defaults to current window
@@ -122,11 +117,6 @@ export async function destroy(windowLabel?: string): Promise<void> {
   })
 }
 
-
-/**
- * @deprecated Use `destroy()` instead. This function will be removed in a future version.
- */
-export const destroyMpv = destroy
 
 /**
  * Listen to mpv property change events.
@@ -242,11 +232,6 @@ export async function observeProperties(
   )
 }
 
-/**
- * @deprecated Use `observeProperties()` instead. This function will be removed in a future version.
- */
-export const observeMpvProperties = observeProperties
-
 
 /**
  * Listen to all mpv events.
@@ -295,11 +280,6 @@ export async function listenEvents(
 
   return await listen<MpvEvent>(eventName, (event) => callback(event.payload))
 }
-
-/**
- * @deprecated Use `listenEvents()` instead. This function will be removed in a future version.
- */
-export const listenMpvEvents = listenEvents
 
 
 /**
@@ -416,11 +396,6 @@ export async function command(
   }
 }
 
-/**
- * @deprecated Use `command()` instead. This function will be removed in a future version.
- */
-export const sendMpvCommand = command
-
 
 /**
  * Gets the value of an mpv property.
@@ -526,3 +501,28 @@ export async function setVideoMarginRatio(ratio: VideoMarginRatio, windowLabel?:
     windowLabel,
   })
 }
+
+/**
+ * @deprecated Use `init()` instead. This function will be removed in a future version.
+ */
+export const initializeMpv = init
+
+/**
+ * @deprecated Use `destroy()` instead. This function will be removed in a future version.
+ */
+export const destroyMpv = destroy
+
+/**
+ * @deprecated Use `observeProperties()` instead. This function will be removed in a future version.
+ */
+export const observeMpvProperties = observeProperties
+
+/**
+ * @deprecated Use `listenEvents()` instead. This function will be removed in a future version.
+ */
+export const listenMpvEvents = listenEvents
+
+/**
+ * @deprecated Use `command()` instead. This function will be removed in a future version.
+ */
+export const sendMpvCommand = command
