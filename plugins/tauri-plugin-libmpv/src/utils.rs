@@ -10,22 +10,22 @@ pub fn get_wid(raw_window_handle: raw_window_handle::RawWindowHandle) -> crate::
             let error_message =
                 "Window embedding via --wid is not supported on Wayland.".to_string();
             error!("{}", error_message);
-            Err(crate::Error::UnsupportedPlatform(error_message).into())
+            Err(crate::Error::UnsupportedPlatform(error_message))
         }
         _ => {
             let error_message = "Unsupported platform.".to_string();
             error!("{}", error_message);
-            Err(crate::Error::UnsupportedPlatform("".to_string()).into())
+            Err(crate::Error::UnsupportedPlatform("".to_string()))
         }
     }
 }
 
 pub fn get_proc_address(
     display: &std::sync::Arc<glutin::display::Display>,
-    name: &str,
+    addr: &str,
 ) -> *mut core::ffi::c_void {
     use glutin::prelude::GlDisplay;
-    match std::ffi::CString::new(name) {
+    match std::ffi::CString::new(addr) {
         Ok(c_str) => display.get_proc_address(&c_str) as *mut _,
         Err(_) => std::ptr::null_mut(),
     }
