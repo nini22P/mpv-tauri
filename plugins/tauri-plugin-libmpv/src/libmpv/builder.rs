@@ -131,6 +131,8 @@ impl MpvBuilder {
         if event_handler.is_some() {
             let event_listener = EventListener { event_handle };
             start_event_listener(event_handler.unwrap(), event_listener);
+        } else if !event_handle.inner().is_null() {
+            unsafe { libmpv_sys::mpv_terminate_destroy(event_handle.inner()) };
         }
 
         let mpv = Mpv { handle };

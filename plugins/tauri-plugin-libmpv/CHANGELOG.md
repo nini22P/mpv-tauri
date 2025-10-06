@@ -1,3 +1,7 @@
+## v0.1.1
+
+- Remove unused rendering modes.
+
 ## v0.1.0
 
 - Replace the `libmpv2` dependency with a custom `libmpv-sys` binding.
