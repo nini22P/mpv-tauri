@@ -19,7 +19,6 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     let mpv = Mpv {
         app: app.clone(),
         instances: Mutex::new(HashMap::new()),
-        render_contexts: Mutex::new(HashMap::new()),
     };
     Ok(mpv)
 }
@@ -27,21 +26,11 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mpv<R: Runtime> {
     app: AppHandle<R>,
     pub instances: Mutex<HashMap<String, MpvInstance>>,
-    pub render_contexts: Mutex<HashMap<String, SharedRenderContext>>,
 }
 
 impl<R: Runtime> Mpv<R> {
     pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
-        match mpv_config.integration_mode {
-            MpvIntegration::Wid => {
-                self.init_wid_mode(mpv_config, window_label)?;
-            }
-            _ => {
-                return Err(crate::Error::UnsupportedIntegrationMode(
-                    "Unsupported integration mode".to_string(),
-                ));
-            }
-        }
+        self.init_wid_mode(mpv_config, window_label)?;
 
         Ok(window_label.to_string())
     }

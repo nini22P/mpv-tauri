@@ -27,7 +27,7 @@ impl MpvBuilder {
 
         if event_handle.is_null() {
             unsafe { libmpv_sys::mpv_terminate_destroy(handle) };
-            return Err(Error::Create);
+            return Err(Error::ClientCreation);
         }
 
         Ok(Self {

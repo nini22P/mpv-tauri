@@ -27,7 +27,6 @@ export type MpvPropertyData<T extends MpvObservableProperty> =
   : never;
 
 export interface MpvConfig {
-  integrationMode?: 'wid' | 'render';
   initialOptions?: Record<string, string | boolean | number>;
   observedProperties?: readonly MpvObservableProperty[];
 }

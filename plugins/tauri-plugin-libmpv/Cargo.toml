@@ -22,9 +22,6 @@ raw-window-handle = { workspace = true }
 log = { workspace = true }
 libc = { workspace = true }
 tauri-plugin-libmpv-sys = { version = "0.1.0", default-features = false }
-glow = "0.16"
-winit = "0.30"
-glutin = "0.32"
 base64 = "0.22"
 scopeguard = "1"
 indexmap = { version = "2", features = ["serde"] }

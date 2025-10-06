@@ -33,7 +33,6 @@ export interface MpvPlaylistItem {
 }
 
 export interface PlayerStoreState {
-  integrationMode: 'wid' | 'render';
   isInitalized: boolean;
   isPaused: boolean;
   playlist: MpvPlaylistItem[];

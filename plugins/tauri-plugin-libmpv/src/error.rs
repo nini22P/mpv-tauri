@@ -19,22 +19,14 @@ pub enum Error {
     WindowHandle(#[from] raw_window_handle::HandleError),
     #[error("mpv instance not found: {0}")]
     InstanceNotFound(String),
-    #[error("mpv initialization failed: {0}")]
-    Initialization(String),
-    #[error("Failed to create mpv client: {0}")]
-    ClientCreation(String),
     #[error("Command Error: {0}")]
     Command(String),
     #[error("Set Property Error: {0}")]
     SetProperty(String),
     #[error("Get Property Error: {0}")]
     GetProperty(String),
-    #[error("Invalid format string provided: {0}")]
-    Format(String),
     #[error("Failed to destroy mpv instance: {0}")]
     Destroy(String),
-    #[error("Unsupported integration mode : {0}")]
-    UnsupportedIntegrationMode(String),
 }
 
 impl Serialize for Error {

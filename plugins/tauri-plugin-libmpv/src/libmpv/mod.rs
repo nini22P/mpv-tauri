@@ -5,7 +5,6 @@ mod command;
 mod error;
 mod event;
 mod property;
-mod render;
 mod utils;
 
 pub use self::{
@@ -13,7 +12,6 @@ pub use self::{
     error::{Error, Result},
     event::Event,
     property::{MpvFormat, MpvNode, PropertyValue},
-    render::RenderContext,
     utils::error_string,
 };
 

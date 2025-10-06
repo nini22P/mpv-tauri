@@ -19,14 +19,3 @@ pub fn get_wid(raw_window_handle: raw_window_handle::RawWindowHandle) -> crate::
         }
     }
 }
-
-pub fn get_proc_address(
-    display: &std::sync::Arc<glutin::display::Display>,
-    addr: &str,
-) -> *mut core::ffi::c_void {
-    use glutin::prelude::GlDisplay;
-    match std::ffi::CString::new(addr) {
-        Ok(c_str) => display.get_proc_address(&c_str) as *mut _,
-        Err(_) => std::ptr::null_mut(),
-    }
-}
