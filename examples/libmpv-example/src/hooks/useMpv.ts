@@ -16,7 +16,6 @@ const OBSERVED_PROPERTIES = [
 
 const useMpv = () => {
 
-  const integrationMode = usePlayerStore.use.integrationMode()
   const updatePlayerState = usePlayerStore.use.updatePlayerState()
 
   useEffect(() => {
@@ -25,7 +24,6 @@ const useMpv = () => {
       updatePlayerState('isInitalized', false)
 
       const mpvConfig: MpvConfig = {
-        integrationMode,
         initialOptions: {
           'vo': 'gpu-next',
           'hwdec': 'auto-safe',
@@ -46,7 +44,7 @@ const useMpv = () => {
       }
 
     })()
-  }, [integrationMode])
+  }, [])
 
   useEffect(() => {
     const unlistenPromise = listenEvents(
