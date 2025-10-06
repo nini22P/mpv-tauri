@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use tauri_plugin_libmpv_sys as libmpv_sys;
 
-pub(crate) fn error_string(err: i32) -> String {
+pub fn error_string(err: i32) -> String {
     unsafe {
         let c_str = libmpv_sys::mpv_error_string(err);
         if c_str.is_null() {

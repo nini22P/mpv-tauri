@@ -1,8 +1,56 @@
-use crate::libmpv::{utils::cstr_to_string, MpvNode, Result};
+use crate::libmpv::{utils::cstr_to_string, MpvHandle, MpvNode, Result};
 use log::warn;
 use scopeguard::defer;
 use serde::Serialize;
 use tauri_plugin_libmpv_sys as libmpv_sys;
+
+pub type EventHandler = Box<dyn FnMut(Event) -> Result<()> + Send + 'static>;
+
+pub struct EventListener {
+    pub event_handle: MpvHandle,
+}
+
+impl EventListener {
+    pub fn wait_event(&self, timeout: f64) -> Option<Result<Event>> {
+        let event_ptr = unsafe { libmpv_sys::mpv_wait_event(self.event_handle.inner(), timeout) };
+
+        if event_ptr.is_null() {
+            return None;
+        }
+
+        let event = unsafe { *event_ptr };
+
+        if event.event_id == libmpv_sys::mpv_event_id_MPV_EVENT_NONE {
+            return None;
+        }
+
+        match unsafe { Event::from(event) } {
+            Ok(Some(event)) => Some(Ok(event)),
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+pub fn start_event_listener(mut event_handler: EventHandler, event_listener: EventListener) {
+    std::thread::spawn(move || {
+        while let Some(Ok(event)) = event_listener.wait_event(60.0) {
+            if let Event::Shutdown = event {
+                log::info!("Shutdown event received. Terminating mpv core from event thread.");
+                let _ = event_handler(event);
+                break;
+            }
+            if let Err(e) = event_handler(event) {
+                log::error!("Error in mpv event handler: {}. Exiting loop.", e);
+                break;
+            }
+        }
+
+        if !event_listener.event_handle.inner().is_null() {
+            unsafe { libmpv_sys::mpv_terminate_destroy(event_listener.event_handle.inner()) };
+        }
+    });
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]

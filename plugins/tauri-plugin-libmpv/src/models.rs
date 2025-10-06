@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     num::NonZeroU32,
-    sync::{mpsc, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
-use tauri::{AppHandle, Runtime, WebviewWindow};
+use tauri::{Runtime, WebviewWindow};
 
 use crate::libmpv::{self, RenderContext};
 
@@ -95,17 +95,4 @@ impl NonZeroU32PhysicalSize for winit::dpi::PhysicalSize<u32> {
         let h = NonZeroU32::new(self.height)?;
         Some((w, h))
     }
-}
-
-pub struct MpvRenderResources<R: Runtime> {
-    pub window: WebviewWindow<R>,
-    pub app: AppHandle<R>,
-    pub window_label: String,
-    pub render_context: Arc<Mutex<RenderContext<Arc<glutin::display::Display>>>>,
-    pub surface: glutin::surface::Surface<glutin::surface::WindowSurface>,
-    pub current_context: glutin::context::PossiblyCurrentContext,
-    pub display: Arc<glutin::display::Display>,
-    pub event_rx: mpsc::Receiver<MpvThreadEvent>,
-    pub redraw_tx_for_stop: mpsc::Sender<MpvThreadEvent>,
-    pub mpv_client: libmpv::Mpv,
 }

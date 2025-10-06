@@ -65,15 +65,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             {
                 let mpv_state = app_handle.state::<Mpv<R>>();
 
-                let instances_lock = match mpv_state.instances.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => {
-                        log::warn!("Mutex for mpv instances was poisoned. Recovering.");
-                        poisoned.into_inner()
-                    }
+                let instance_exists = {
+                    let instances_lock = match mpv_state.instances.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => {
+                            log::warn!("Mutex for mpv instances was poisoned. Recovering.");
+                            poisoned.into_inner()
+                        }
+                    };
+                    instances_lock.contains_key(label)
                 };
 
-                if instances_lock.contains_key(label) {
+                if instance_exists {
                     api.prevent_close();
 
                     let app_handle_clone = app_handle.clone();

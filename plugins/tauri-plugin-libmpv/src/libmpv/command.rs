@@ -15,7 +15,7 @@ impl Mpv {
             c_args.iter().map(|s| s.as_ptr()).collect();
         c_pointers.push(std::ptr::null());
 
-        let err = unsafe { libmpv_sys::mpv_command(self.handle, c_pointers.as_mut_ptr()) };
+        let err = unsafe { libmpv_sys::mpv_command(self.handle.0, c_pointers.as_mut_ptr()) };
 
         if err < 0 {
             return Err(Error::Command {

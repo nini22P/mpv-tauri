@@ -67,6 +67,7 @@ impl<T: Send + 'static> RenderContext<T> {
             get_proc_address: params.get_proc_address,
             context: params.context,
         });
+
         let payload_ptr = &*payload as *const _ as *mut c_void;
 
         let opengl_init_params = Box::new(libmpv_sys::mpv_opengl_init_params {
@@ -78,7 +79,6 @@ impl<T: Send + 'static> RenderContext<T> {
 
         mpv_params.push(libmpv_sys::mpv_render_param {
             type_: libmpv_sys::mpv_render_param_type_MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
-
             data: params_ptr,
         });
 
@@ -92,7 +92,11 @@ impl<T: Send + 'static> RenderContext<T> {
 
         let mut ctx: *mut libmpv_sys::mpv_render_context = ptr::null_mut();
         let err = unsafe {
-            libmpv_sys::mpv_render_context_create(&mut ctx, mpv.handle, mpv_params.as_mut_ptr())
+            libmpv_sys::mpv_render_context_create(
+                &mut ctx,
+                mpv.handle.inner(),
+                mpv_params.as_mut_ptr(),
+            )
         };
         if err < 0 {
             return Err(Error::RenderContextCreation(error_string(err)));
@@ -170,6 +174,7 @@ impl<T: Send + 'static> Drop for RenderContext<T> {
             let _ = unsafe { Box::from_raw(self.update_callback_data) };
             self.update_callback_data = ptr::null_mut();
         }
+
         if !self.ctx.is_null() {
             unsafe { libmpv_sys::mpv_render_context_free(self.ctx) };
         }

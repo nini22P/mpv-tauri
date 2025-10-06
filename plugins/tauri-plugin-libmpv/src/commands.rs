@@ -17,8 +17,11 @@ pub(crate) async fn init<R: Runtime>(
 }
 
 #[command]
-pub(crate) async fn destroy<R: Runtime>(app: AppHandle<R>, window_label: &str) -> Result<()> {
-    app.mpv().destroy(window_label)
+pub(crate) async fn destroy<R: Runtime>(app: AppHandle<R>, window_label: String) -> Result<()> {
+    tauri::async_runtime::spawn_blocking(move || app.mpv().destroy(&window_label))
+        .await
+        .map_err(|e| crate::Error::Destroy(e.to_string()))?
+        .map_err(Into::into)
 }
 
 #[command]

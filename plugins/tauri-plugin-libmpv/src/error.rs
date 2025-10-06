@@ -33,8 +33,8 @@ pub enum Error {
     Format(String),
     #[error("Failed to destroy mpv instance: {0}")]
     Destroy(String),
-    #[error("Failed to render frame: {0}")]
-    Render(String),
+    #[error("Unsupported integration mode : {0}")]
+    UnsupportedIntegrationMode(String),
 }
 
 impl Serialize for Error {
