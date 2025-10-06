@@ -1,36 +1,30 @@
-import { useEffect } from "react";
-import useAutoHide from "../hooks/useAutoHide";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import VideoRect from "./VideoRect";
-import Controls from "./Controls";
-import './Player.css';
-import usePlayerStore from "../store";
-import useMpv from "../hooks/useMpv";
-import { loadFile } from "../utils/commands";
+import { useEffect } from 'react'
+import useAutoHide from '../hooks/useAutoHide'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import VideoRect from './VideoRect'
+import Controls from './Controls'
+import './Player.css'
+import usePlayerStore from '../store'
+import useMpv from '../hooks/useMpv'
+import { loadFile } from '../utils/commands'
 
 const Player = ({ source }: { source: string | null }) => {
-  useMpv();
+  useMpv()
 
-  const { visible, show: showControls, hide: hideControls } = useAutoHide(5000);
+  const { visible, show: showControls, hide: hideControls } = useAutoHide(5000)
 
-  const connection = usePlayerStore.use.connection();
-  const filename = usePlayerStore.use.filename();
-  const isFullscreen = usePlayerStore.use.isFullscreen();
-
-  useEffect(() => {
-    if (connection === 'connected') {
-      showControls();
-    }
-  }, [connection]);
+  const connection = usePlayerStore.use.connection()
+  const filename = usePlayerStore.use.filename()
+  const isFullscreen = usePlayerStore.use.isFullscreen()
 
   useEffect(() => {
     if (connection === 'connected' && source) {
-      loadFile(source);
+      loadFile(source)
     }
   }, [connection, source])
 
   useEffect(() => {
-    getCurrentWindow().setTitle(filename ? `${filename} - mpv-tauri` : 'mpv-tauri');
+    getCurrentWindow().setTitle(filename ? `${filename} - tauri-plugin-mpv-example` : 'tauri-plugin-mpv-example')
   }, [filename])
 
   return (
@@ -44,7 +38,7 @@ const Player = ({ source }: { source: string | null }) => {
           : <Controls />
       }
     </div>
-  );
+  )
 }
 
-export default Player;
+export default Player

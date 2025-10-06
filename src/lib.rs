@@ -1,6 +1,6 @@
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime,
+    Manager, RunEvent, Runtime, WindowEvent,
 };
 
 pub use models::*;
@@ -16,6 +16,7 @@ mod events;
 mod ipc;
 mod models;
 mod process;
+mod utils;
 
 pub use error::{Error, Result};
 
@@ -37,18 +38,72 @@ impl<R: Runtime, T: Manager<R>> crate::MpvExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("mpv")
         .invoke_handler(tauri::generate_handler![
-            commands::initialize_mpv,
-            commands::destroy_mpv,
-            commands::send_mpv_command,
+            commands::init,
+            commands::destroy,
+            commands::command,
             commands::set_video_margin_ratio,
         ])
         .setup(|app, api| {
+            unsafe {
+                let locale = std::ffi::CString::new("C").unwrap();
+                libc::setlocale(libc::LC_NUMERIC, locale.as_ptr());
+            }
+
             #[cfg(mobile)]
             let mpv = mobile::init(app, api)?;
             #[cfg(desktop)]
             let mpv = desktop::init(app, api)?;
             app.manage(mpv);
             Ok(())
+        })
+        .on_event(|app_handle, run_event| {
+            if let RunEvent::WindowEvent {
+                label,
+                event: WindowEvent::CloseRequested { api, .. },
+                ..
+            } = run_event
+            {
+                let mpv_state = app_handle.state::<Mpv<R>>();
+
+                let instance_exists = {
+                    let instances_lock = match mpv_state.instances.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => {
+                            log::warn!("Mutex for mpv instances was poisoned. Recovering.");
+                            poisoned.into_inner()
+                        }
+                    };
+                    instances_lock.contains_key(label)
+                };
+
+                if instance_exists {
+                    api.prevent_close();
+
+                    let app_handle_clone = app_handle.clone();
+                    let window_label = label.to_string();
+
+                    tauri::async_runtime::spawn(async move {
+                        log::info!(
+                            "Close requested for '{}', destroying mpv instance first...",
+                            &window_label
+                        );
+
+                        if let Err(e) = app_handle_clone.mpv().destroy(&window_label) {
+                            log::error!(
+                                "Failed to destroy mpv for '{}': {}. Still closing.",
+                                &window_label,
+                                e
+                            );
+                        }
+
+                        if let Some(window) = app_handle_clone.get_webview_window(&window_label) {
+                            if let Err(e) = window.close() {
+                                log::error!("Failed to close window '{}': {}", &window_label, e);
+                            }
+                        }
+                    });
+                }
+            }
         })
         .build()
 }

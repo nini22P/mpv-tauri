@@ -1,4 +1,5 @@
 use log::{debug, error, info, trace, warn};
+use raw_window_handle::HasWindowHandle;
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -6,20 +7,20 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::events::{self};
 use crate::ipc::get_ipc_pipe;
+use crate::utils::get_wid;
 use crate::{MpvConfig, MpvExt, MpvInstance};
 
 pub fn init_mpv_process<R: Runtime>(
     app: &AppHandle<R>,
-    window_handle: i64,
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> crate::Result<()> {
-    let ipc_pipe = get_ipc_pipe(&window_label);
-    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms.unwrap_or(2000));
+    let ipc_pipe = get_ipc_pipe(window_label);
+    let ipc_timeout = Duration::from_millis(mpv_config.ipc_timeout_ms);
 
     let mut instances_lock = app.mpv().instances.lock().unwrap();
     if let Some(instance) = instances_lock.get_mut(window_label) {
@@ -46,23 +47,50 @@ pub fn init_mpv_process<R: Runtime>(
 
     info!("Initializing mpv for window '{}'...", window_label);
 
-    debug!("Using IPC pipe: {}", ipc_pipe);
-    debug!(
-        "Starting mpv process for window '{}' (WID: {})",
-        window_label, window_handle
-    );
+    let wid_arg = mpv_config
+        .args
+        .iter()
+        .find_map(|arg| arg.strip_prefix("--wid="));
 
-    // Default mpv arguments
+    let parsed_wid: Option<i64> = wid_arg.and_then(|wid_str| match wid_str.parse() {
+        Ok(wid) => Some(wid),
+        Err(_) => {
+            warn!(
+                "Failed to parse provided wid '{}'. Falling back to window handle.",
+                wid_str
+            );
+            None
+        }
+    });
+
+    let wid: i64 = if let Some(parsed_wid) = parsed_wid {
+        parsed_wid
+    } else {
+        let window = app
+            .get_webview_window(window_label)
+            .ok_or_else(|| crate::Error::WindowNotFound(window_label.to_string()))?;
+        get_wid(window.window_handle()?.as_raw())?
+    };
+
     // libmpv profile: https://github.com/mpv-player/mpv/blob/master/etc/builtin.conf#L21
     let mut args = vec![
-        format!("--wid={}", window_handle),
         format!("--input-ipc-server={}", ipc_pipe),
         "--profile=libmpv".to_string(),
     ];
 
-    args.extend(mpv_config.mpv_args.unwrap_or_default());
+    if parsed_wid.is_none() {
+        args.push(format!("--wid={}", wid));
+    }
 
-    let mpv_path = mpv_config.mpv_path.unwrap_or_else(|| "mpv".to_string());
+    args.extend(mpv_config.args.iter().cloned());
+
+    debug!("Using IPC pipe: {}", ipc_pipe);
+    debug!(
+        "Starting mpv process for window '{}' (WID: {})",
+        window_label, wid
+    );
+
+    let mpv_path = mpv_config.path;
 
     debug!(
         "Spawning mpv process for window '{}' with args: {} {}",
@@ -72,7 +100,7 @@ pub fn init_mpv_process<R: Runtime>(
     );
 
     let args_clone = args.clone();
-    let show_mpv_output = mpv_config.show_mpv_output.unwrap_or(false);
+    let show_mpv_output = mpv_config.show_mpv_output;
 
     match Command::new(mpv_path.clone())
         .args(args)
@@ -88,7 +116,7 @@ pub fn init_mpv_process<R: Runtime>(
             if let Some(stdout) = child.stdout.take() {
                 thread::spawn(move || {
                     let reader = BufReader::new(stdout);
-                    for line in reader.lines().flatten() {
+                    for line in reader.lines().map_while(Result::ok) {
                         if show_mpv_output {
                             trace!("mpv stdout [{}] {}", window_label_clone, line);
                         }
@@ -116,7 +144,7 @@ pub fn init_mpv_process<R: Runtime>(
                         window_label,
                     );
                     error!("{}", error_message);
-                    error_message.push_str("\n");
+                    error_message.push('\n');
                     if let Ok(mut queue) = log_queue.lock() {
                         while let Some(line) = queue.pop_front() {
                             error!("mpv stdout [{}] {}", window_label, line);
@@ -138,12 +166,17 @@ pub fn init_mpv_process<R: Runtime>(
             );
 
             let window_label_clone = window_label.to_string();
-            let observed_properties = mpv_config.observed_properties.clone().unwrap_or_default();
+            let observed_properties = mpv_config.observed_properties.clone();
             let app_clone = app.clone();
             let process_id = child.id();
 
-            let instance = MpvInstance { process: child };
+            let instance = MpvInstance {
+                process: child,
+                ipc_timeout,
+            };
             instances_lock.insert(window_label.to_string(), instance);
+
+            drop(instances_lock);
 
             std::thread::spawn(move || {
                 events::start_event_listener(
@@ -169,7 +202,7 @@ pub fn init_mpv_process<R: Runtime>(
                 mpv_path,
                 args_clone.join(" ")
             );
-            return Err(crate::Error::MpvProcessError(error_message));
+            Err(crate::Error::MpvProcessError(error_message))
         }
     }
 }
@@ -204,7 +237,7 @@ pub fn kill_mpv_process<R: Runtime>(app: &AppHandle<R>, window_label: &str) -> c
                     e,
                 );
                 error!("{}", error_message);
-                return Err(crate::Error::MpvProcessError(error_message));
+                Err(crate::Error::MpvProcessError(error_message))
             }
         }
     } else {

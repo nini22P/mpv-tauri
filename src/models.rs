@@ -4,18 +4,31 @@ use std::{collections::HashMap, process::Child};
 
 pub struct MpvInstance {
     pub process: Child,
+    pub ipc_timeout: std::time::Duration,
+}
+
+fn default_mpv_path() -> String {
+    "mpv".to_string()
+}
+
+fn default_ipc_timeout() -> u64 {
+    2000
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MpvConfig {
-    pub mpv_path: Option<String>,
-    pub mpv_args: Option<Vec<String>>,
-    pub observed_properties: Option<Vec<String>>,
-    pub ipc_timeout_ms: Option<u64>,
-    pub show_mpv_output: Option<bool>,
+    #[serde(default = "default_mpv_path")]
+    pub path: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub observed_properties: Vec<String>,
+    #[serde(default = "default_ipc_timeout")]
+    pub ipc_timeout_ms: u64,
+    #[serde(default)]
+    pub show_mpv_output: bool,
 }
-
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct MpvCommand {
     pub command: Vec<serde_json::Value>,

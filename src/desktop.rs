@@ -1,12 +1,10 @@
+use log::info;
+use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
-use log::{error, info, warn};
-use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use serde::de::DeserializeOwned;
-use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
-
-use crate::{ipc, models::*, process};
+use crate::{ipc, models::*, process, MpvExt};
 use crate::{MpvInstance, Result};
 
 pub fn init<R: Runtime, C: DeserializeOwned>(
@@ -27,55 +25,28 @@ pub struct Mpv<R: Runtime> {
 }
 
 impl<R: Runtime> Mpv<R> {
-    pub fn initialize_mpv(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
+    pub fn init(&self, mpv_config: MpvConfig, window_label: &str) -> Result<String> {
         let app = self.app.clone();
 
-        if let Some(webview_window) = app.get_webview_window(&window_label) {
-            let handle_result = webview_window.window_handle();
-
-            match handle_result {
-                Ok(handle_wrapper) => {
-                    let raw_handle = handle_wrapper.as_raw();
-                    let window_handle = match raw_handle {
-                        RawWindowHandle::Win32(handle) => handle.hwnd.get() as i64,
-                        RawWindowHandle::Xlib(handle) => handle.window as i64,
-                        RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr() as i64,
-                        _ => {
-                            error!(
-                                "Unsupported window handle type for window '{}'.",
-                                window_label
-                            );
-                            return Err(crate::Error::UnsupportedPlatform);
-                        }
-                    };
-
-                    process::init_mpv_process(&app, window_handle, mpv_config, window_label)?;
-                }
-                Err(e) => {
-                    error!(
-                        "Failed to get raw window handle for window '{}': {:?}",
-                        window_label, e
-                    );
-                    return Err(crate::Error::WindowHandleError);
-                }
-            }
-        } else {
-            warn!(
-                "Window with label '{}' not found. Please ensure the window exists.",
-                window_label
-            );
-            return Err(crate::Error::WindowHandleError);
-        }
+        process::init_mpv_process(&app, mpv_config, window_label)?;
 
         Ok(window_label.to_string())
     }
 
-    pub fn send_mpv_command(
+    pub fn destroy(&self, window_label: &str) -> Result<()> {
+        process::kill_mpv_process(&self.app, window_label)
+    }
+
+    pub fn command(
         &self,
-        mpv_command: &MpvCommand,
+        mpv_command: MpvCommand,
         window_label: &str,
     ) -> Result<MpvCommandResponse> {
-        ipc::send_command(mpv_command, window_label)
+        let ipc_timeout = {
+            let instances_lock = self.app.mpv().instances.lock().unwrap();
+            instances_lock.get(window_label).unwrap().ipc_timeout
+        };
+        ipc::send_command(mpv_command, window_label, ipc_timeout)
     }
 
     pub fn set_video_margin_ratio(
@@ -83,58 +54,28 @@ impl<R: Runtime> Mpv<R> {
         ratio: VideoMarginRatio,
         window_label: &str,
     ) -> Result<()> {
-        if let Some(left) = ratio.left {
-            let mpv_command = MpvCommand {
-                command: vec![
-                    "set_property".into(),
-                    "video-margin-ratio-left".into(),
-                    left.into(),
-                ],
-                request_id: None,
-            };
-            ipc::send_command(&mpv_command, window_label)?;
-        }
+        let ipc_timeout = {
+            let instances_lock = self.app.mpv().instances.lock().unwrap();
+            instances_lock.get(window_label).unwrap().ipc_timeout
+        };
 
-        if let Some(right) = ratio.right {
-            let mpv_command = MpvCommand {
-                command: vec![
-                    "set_property".into(),
-                    "video-margin-ratio-right".into(),
-                    right.into(),
-                ],
-                request_id: None,
-            };
-            ipc::send_command(&mpv_command, window_label)?;
-        }
+        let margins = [
+            ("video-margin-ratio-left", ratio.left),
+            ("video-margin-ratio-right", ratio.right),
+            ("video-margin-ratio-top", ratio.top),
+            ("video-margin-ratio-bottom", ratio.bottom),
+        ];
 
-        if let Some(top) = ratio.top {
-            let mpv_command = MpvCommand {
-                command: vec![
-                    "set_property".into(),
-                    "video-margin-ratio-top".into(),
-                    top.into(),
-                ],
-                request_id: None,
-            };
-            ipc::send_command(&mpv_command, window_label)?;
-        }
-
-        if let Some(bottom) = ratio.bottom {
-            let mpv_command = MpvCommand {
-                command: vec![
-                    "set_property".into(),
-                    "video-margin-ratio-bottom".into(),
-                    bottom.into(),
-                ],
-                request_id: None,
-            };
-            ipc::send_command(&mpv_command, window_label)?;
+        for (property, value_option) in margins {
+            if let Some(value) = value_option {
+                let mpv_command = MpvCommand {
+                    command: vec!["set_property".into(), property.into(), value.into()],
+                    request_id: None,
+                };
+                ipc::send_command(mpv_command, window_label, ipc_timeout)?;
+            }
         }
 
         Ok(())
-    }
-
-    pub fn destroy_mpv(&self, window_label: &str) -> Result<()> {
-        process::kill_mpv_process(&self.app, window_label)
     }
 }

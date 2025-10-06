@@ -1,19 +1,19 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mpv-tauri",
-  "mainBinaryName": "mpv-tauri",
+  "productName": "tauri-plugin-mpv-example",
+  "mainBinaryName": "tauri-plugin-mpv-example",
   "version": "0.1.0",
-  "identifier": "nini22p.mpv-tauri",
+  "identifier": "nini22p.tauri-plugin-mpv-example",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "mpv-tauri",
+        "title": "tauri-plugin-mpv-example",
         "width": 1280,
         "height": 720,
         "transparent": true,
@@ -37,7 +37,7 @@
   },
   "plugins": {
     "cli": {
-      "description": "mpv-tauri",
+      "description": "tauri-plugin-mpv-example",
       "args": [
         {
           "name": "source",

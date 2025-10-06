@@ -8,25 +8,23 @@ use crate::Result;
 use crate::VideoMarginRatio;
 
 #[command]
-pub(crate) async fn initialize_mpv<R: Runtime>(
+pub(crate) async fn init<R: Runtime>(
     app: AppHandle<R>,
     mpv_config: MpvConfig,
     window_label: &str,
 ) -> Result<String> {
-    app.mpv().initialize_mpv(mpv_config, window_label)
+    app.mpv().init(mpv_config, window_label)
 }
 
 #[command]
-pub(crate) async fn send_mpv_command<R: Runtime>(
+pub(crate) async fn command<R: Runtime>(
     app: AppHandle<R>,
     mpv_command: MpvCommand,
     window_label: String,
 ) -> Result<MpvCommandResponse> {
-    tauri::async_runtime::spawn_blocking(move || {
-        app.mpv().send_mpv_command(&mpv_command, &window_label)
-    })
-    .await
-    .unwrap()
+    tauri::async_runtime::spawn_blocking(move || app.mpv().command(mpv_command, &window_label))
+        .await
+        .unwrap()
 }
 
 #[command]
@@ -43,6 +41,6 @@ pub(crate) async fn set_video_margin_ratio<R: Runtime>(
 }
 
 #[command]
-pub(crate) async fn destroy_mpv<R: Runtime>(app: AppHandle<R>, window_label: &str) -> Result<()> {
-    app.mpv().destroy_mpv(window_label)
+pub(crate) async fn destroy<R: Runtime>(app: AppHandle<R>, window_label: &str) -> Result<()> {
+    app.mpv().destroy(window_label)
 }

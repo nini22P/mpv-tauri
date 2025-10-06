@@ -1,0 +1,41 @@
+name: ci
+on:
+  push:
+    branches: 
+      - main
+    paths-ignore:
+      - README.md
+  pull_request:
+    paths-ignore:
+      - README.md
+
+jobs:
+  build-mpv-example-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build example
+        run: |
+          npm install -g pnpm
+          pnpm install
+          pnpm build
+          Set-Location .\examples\react
+          pnpm install
+          pnpm tauri build
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-plugin-mpv-example-windows
+          path: examples/react/src-tauri/target/release/tauri-plugin-mpv-example.exe

@@ -1,11 +1,11 @@
 {
   "name": "tauri-plugin-mpv-api",
-  "version": "0.2.7",
+  "version": "0.5.0",
   "author": "22",
-  "description": "A Tauri plugin to embed the mpv player in your app via JSON IPC.",
-  "license": "MIT",
+  "description": "A Tauri plugin for embedding the mpv player in your app by controlling its process via JSON IPC.",
+  "license": "MPL-2.0",
   "type": "module",
-  "homepage": "https://github.com/nini22P/tauri-plugin-mpv",
+  "homepage": "https://github.com/nini22P/mpv-tauri/tree/main/plugins/tauri-plugin-mpv",
   "repository": {
     "type": "git",
     "url": "https://github.com/nini22P/tauri-plugin-mpv.git"
@@ -41,15 +41,19 @@
     "LICENSE"
   ],
   "scripts": {
-    "build:plugin:mpv": "pnpm --filter ./plugins/tauri-plugin-mpv build",
-    "build:plugin:libmpv": "pnpm --filter ./plugins/tauri-plugin-libmpv build",
-    "build:example:mpv": "pnpm build:plugin:mpv && pnpm --filter tauri-plugin-mpv-example tauri build",
-    "build:example:libmpv": "pnpm build:plugin:libmpv && pnpm --filter tauri-plugin-libmpv-example tauri build",
-    "dev:example:mpv": "pnpm build:plugin:mpv && cd examples/mpv-example && pnpm tauri dev",
-    "dev:example:libmpv": "pnpm build:plugin:libmpv && cd examples/libmpv-example && pnpm tauri dev",
+    "build": "rollup -c",
+    "prepublishOnly": "pnpm run build",
+    "pretest": "pnpm run build",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@tauri-apps/api": "2.8.0"
+  },
   "devDependencies": {
+    "@rollup/plugin-typescript": "12.1.4",
+    "rollup": "^4.50.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
     "@eslint/js": "^9.36.0",
     "eslint": "^9.36.0",
     "eslint-plugin-react": "^7.37.5",

@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    mpv_tauri_lib::run();
+    tauri_plugin_mpv_example_lib::run();
 }

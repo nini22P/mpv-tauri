@@ -1,6 +1,3 @@
-# mpv-tauri
+# tauri-plugin-mpv-example
 
-A example program for embedding mpv window in Tauri.
-
-![image](https://github.com/user-attachments/assets/b5ad484f-e87d-409b-8952-c02faf77a662)
-
+A example program for embedding mpv player in Tauri via JSON IPC.

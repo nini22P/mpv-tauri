@@ -1,5 +1,5 @@
 {
-  "name": "mpv-tauri",
+  "name": "tauri-plugin-mpv-example",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -17,7 +17,7 @@
     "@tauri-apps/plugin-opener": "^2.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "tauri-plugin-mpv-api": "file:../../",
+    "tauri-plugin-mpv-api": "../../",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
