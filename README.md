@@ -1,9 +1,6 @@
 > [!NOTE]
 > **Looking for the `[Tauri Plugin libmpv]`?** It has been moved to a new repository.
 > You can find the latest version here: **[tauri-plugin-libmpv](https://github.com/nini22P/tauri-plugin-libmpv)**
->
-> ---
-> This current repository is for the **Tauri Plugin mpv**. Due to licensing considerations, the original libmpv version of the plugin has been moved to a new repository, and the relevant commit history has been cleared. [See Detail](https://github.com/nini22P/tauri-plugin-libmpv#license)
 
 # Tauri Plugin mpv
 
